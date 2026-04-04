@@ -1,0 +1,1 @@
+// Schema definition for RECOMMENDATION and USER_RECOMMENDATION
