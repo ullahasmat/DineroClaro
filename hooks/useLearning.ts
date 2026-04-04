@@ -1,3 +1,6 @@
-import type { Lesson, Progress } from '@/types';
+const hook = () => {
+  // TODO: implement hook
+  return {} as any;
+};
 
-// Hook for LESSON and PROGRESS data access and state
+export default hook;

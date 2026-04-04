@@ -1,3 +1,6 @@
-import type { AppUser } from '@/types';
+const hook = () => {
+  // TODO: implement hook
+  return {} as any;
+};
 
-// Hook for APP_USER data access and state
+export default hook;

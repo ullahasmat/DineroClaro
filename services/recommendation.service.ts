@@ -1,3 +1,3 @@
-import type { Recommendation, UserRecommendation } from '@/types';
-
-// CRUD operations for RECOMMENDATION and USER_RECOMMENDATION
+export const recommendationService = {
+  placeholder: true,
+};

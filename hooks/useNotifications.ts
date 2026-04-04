@@ -1,3 +1,6 @@
-import type { PushNotification } from '@/types';
+const hook = () => {
+  // TODO: implement hook
+  return {} as any;
+};
 
-// Hook for PUSH_NOTIFICATION data access and state
+export default hook;

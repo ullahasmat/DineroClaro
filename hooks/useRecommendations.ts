@@ -1,3 +1,6 @@
-import type { Recommendation, UserRecommendation } from '@/types';
+const hook = () => {
+  // TODO: implement hook
+  return {} as any;
+};
 
-// Hook for RECOMMENDATION and USER_RECOMMENDATION data access and state
+export default hook;

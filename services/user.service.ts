@@ -1,3 +1,3 @@
-import type { AppUser } from '@/types';
-
-// CRUD operations for APP_USER
+export const userService = {
+  placeholder: true,
+};

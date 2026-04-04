@@ -1,3 +1,6 @@
-import type { FinancialProfile, CreditCardManual } from '@/types';
+const hook = () => {
+  // TODO: implement hook
+  return {} as any;
+};
 
-// Hook for FINANCIAL_PROFILE and CREDIT_CARD_MANUAL data access and state
+export default hook;

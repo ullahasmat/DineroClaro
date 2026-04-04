@@ -1,0 +1,8 @@
+{
+  "reply": "string",
+  "source": "openai",
+  "metadata": {
+    "locale": "en",
+    "goal": "savings"
+  }
+}
