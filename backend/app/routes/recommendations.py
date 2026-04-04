@@ -8,4 +8,4 @@ router = APIRouter()
 
 @router.post("/", response_model=RecommendationResponse)
 async def recommendations(req: RecommendationRequest):
-    return get_recommendations(req.user_id, req.locale)
+    return get_recommendations(req.user_id, req.locale, req.financial_goal, req.life_stage)

@@ -25,5 +25,23 @@ CREATE TABLE IF NOT EXISTS recommendations (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+
+
+
+CREATE TABLE IF NOT EXISTS financial_profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+    credit_score INTEGER,
+    credit_score_range TEXT,       -- 'poor' | 'fair' | 'good' | 'very_good' | 'exceptional'
+    monthly_income NUMERIC(12, 2),
+    checking_balance NUMERIC(12, 2),
+    total_debt NUMERIC(12, 2),
+    financial_goal TEXT,           -- 'build_credit' | 'save_money' | 'start_investing'
+    risk_tolerance TEXT,           -- 'low' | 'medium' | 'high'
+    life_stage TEXT,               -- 'new_arrival' | 'first_gen' | 'established'
+    last_updated TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_recommendations_user_id ON recommendations(user_id);
+CREATE INDEX IF NOT EXISTS idx_financial_profiles_user_id ON financial_profiles(user_id);
