@@ -216,7 +216,7 @@ export default function FinancesScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={s.recBtn} onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.85}>
+        <TouchableOpacity style={s.recBtn} onPress={() => router.push('/(tabs)/dashboard')} activeOpacity={0.85}>
           <Text style={s.recBtnText}>{t.seeRec}</Text>
         </TouchableOpacity>
       </ScrollView>
