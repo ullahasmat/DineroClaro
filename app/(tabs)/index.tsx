@@ -100,13 +100,17 @@ function Divider() {
 }
 
 export default function FinancesScreen() {
-  const { locale } = useLocale();
+  const { locale, financialProfile, setFinancialProfile } = useLocale();
   const t = T[locale];
 
-  const [income, setIncome] = useState(2400);
-  const [checking, setChecking] = useState(1240);
-  const [creditScore] = useState(642);
-  const [cards, setCards] = useState<Card[]>(DEFAULT_CARDS);
+  const [income, setIncome] = useState(() => parseFloat(financialProfile.income) || 2400);
+  const [checking, setChecking] = useState(() => parseFloat(financialProfile.checking) || 1240);
+  const [creditScore] = useState(() => parseFloat(financialProfile.creditScore) || 642);
+  const [cards, setCards] = useState<Card[]>(() =>
+    financialProfile.cards.length > 0
+      ? financialProfile.cards.map(c => ({ name: c.name, balance: parseFloat(c.balance) || 0, limit: parseFloat(c.limit) || 0 }))
+      : DEFAULT_CARDS
+  );
   const [modalVisible, setModalVisible] = useState(false);
   const [newCard, setNewCard] = useState({ name: '', balance: '', limit: '' });
 
@@ -114,11 +118,24 @@ export default function FinancesScreen() {
   const scoreMin = 300;
   const scorePct = ((creditScore - scoreMin) / (scoreGoal - scoreMin)) * 100;
 
+  function syncFinancials(updatedCards?: Card[]) {
+    const c = updatedCards ?? cards;
+    setFinancialProfile({
+      creditScore: String(creditScore),
+      income: String(income),
+      checking: String(checking),
+      cards: c.map(card => ({ name: card.name, balance: String(card.balance), limit: String(card.limit) })),
+    });
+  }
+
   function addCard() {
     if (!newCard.name.trim()) return;
-    setCards(prev => [...prev, { name: newCard.name, balance: parseFloat(newCard.balance) || 0, limit: parseFloat(newCard.limit) || 0 }]);
+    const card = { name: newCard.name, balance: parseFloat(newCard.balance) || 0, limit: parseFloat(newCard.limit) || 0 };
+    const updated = [...cards, card];
+    setCards(updated);
     setNewCard({ name: '', balance: '', limit: '' });
     setModalVisible(false);
+    syncFinancials(updated);
   }
 
   return (

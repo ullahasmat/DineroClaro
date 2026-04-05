@@ -20,8 +20,7 @@ const fallbackApiBase = Platform.select({
   android: 'http://10.0.2.2:8000',
   default: 'http://localhost:8000',
 });
-const API_BASE =
-  process.env.EXPO_PUBLIC_API_BASE?.trim() || (host ? `http://${host}:8000` : fallbackApiBase);
+const API_BASE = host ? `http://${host}:8000` : fallbackApiBase;
 const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 const FF = FONT ? { fontFamily: FONT } : {};
 
@@ -86,7 +85,7 @@ function LangToggle() {
 }
 
 export default function ChatScreen() {
-  const { locale, lifeStage, userProfile } = useLocale();
+  const { locale, lifeStage, userProfile, financialProfile } = useLocale();
   const t = T[locale];
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -113,8 +112,12 @@ export default function ChatScreen() {
           message: msg,
           locale,
           life_stage: lifeStage,
+          name: userProfile.name || undefined,
           age: userProfile.age || undefined,
           area: userProfile.area || undefined,
+          credit_score: financialProfile.creditScore || undefined,
+          income: financialProfile.income || undefined,
+          checking: financialProfile.checking || undefined,
         }),
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);

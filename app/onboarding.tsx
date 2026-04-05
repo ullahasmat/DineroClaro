@@ -117,8 +117,21 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 }
 
 function FinancesStep({ onNext }: { onNext: () => void }) {
+  const { setFinancialProfile } = useLocale();
   const [form, setForm] = useState({ creditScore: '', income: '', checking: '', cardBalance: '', cardLimit: '' });
   const set = (f: keyof typeof form) => (v: string) => setForm(p => ({ ...p, [f]: v }));
+
+  function handleNext() {
+    setFinancialProfile({
+      creditScore: form.creditScore,
+      income: form.income,
+      checking: form.checking,
+      cards: form.cardBalance || form.cardLimit
+        ? [{ name: 'Primary Card', balance: form.cardBalance, limit: form.cardLimit }]
+        : [],
+    });
+    onNext();
+  }
 
   return (
     <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -147,10 +160,10 @@ function FinancesStep({ onNext }: { onNext: () => void }) {
         <TextInput style={[s.input, { flex: 1 }]} placeholder="Limit" placeholderTextColor={C.text3} keyboardType="numeric" value={form.cardLimit} onChangeText={set('cardLimit')} />
       </View>
 
-      <TouchableOpacity style={[s.cta, { marginTop: 8 }]} onPress={onNext} activeOpacity={0.85}>
+      <TouchableOpacity style={[s.cta, { marginTop: 8 }]} onPress={handleNext} activeOpacity={0.85}>
         <Text style={s.ctaText}>Continue  →</Text>
       </TouchableOpacity>
-      <Text style={[s.privacy, { textDecorationLine: 'underline' }]} onPress={onNext}>Skip for now</Text>
+      <Text style={[s.privacy, { textDecorationLine: 'underline' }]} onPress={handleNext}>Skip for now</Text>
     </ScrollView>
   );
 }

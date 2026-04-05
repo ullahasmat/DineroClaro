@@ -29,8 +29,19 @@ BOUNDARIES: You give financial education and guidance, not personalized investme
 Keep responses concise (2–4 short paragraphs). End with one clear, actionable next step when possible."""
 
 
-def _build_context_note(life_stage: str | None, age: str | None, area: str | None, locale: str | None) -> str:
+def _build_context_note(
+    life_stage: str | None,
+    name: str | None,
+    age: str | None,
+    area: str | None,
+    locale: str | None,
+    credit_score: str | None,
+    income: str | None,
+    checking: str | None,
+) -> str:
     parts = []
+    if name:
+        parts.append(f"Name: {name}")
     if life_stage:
         labels = {"new-arrival": "New Arrival", "first-gen": "First Generation", "established": "Established"}
         parts.append(f"Life stage: {labels.get(life_stage, life_stage)}")
@@ -40,6 +51,12 @@ def _build_context_note(life_stage: str | None, age: str | None, area: str | Non
         parts.append(f"Location: {area}")
     if locale:
         parts.append(f"Preferred language: {'Spanish' if locale == 'es' else 'English'}")
+    if credit_score:
+        parts.append(f"Credit score: {credit_score}")
+    if income:
+        parts.append(f"Monthly income: ${income}")
+    if checking:
+        parts.append(f"Checking balance: ${checking}")
     if not parts:
         return ""
     return "\n\n[User context: " + " | ".join(parts) + "]"
@@ -50,8 +67,12 @@ def generate_reply(
     user_id: int | None = None,
     locale: str | None = "en",
     life_stage: str | None = None,
+    name: str | None = None,
     age: str | None = None,
     area: str | None = None,
+    credit_score: str | None = None,
+    income: str | None = None,
+    checking: str | None = None,
 ) -> str:
     if not settings.anthropic_api_key or settings.anthropic_api_key == "your-anthropic-api-key-here":
         return (
@@ -62,7 +83,7 @@ def generate_reply(
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
-    context_note = _build_context_note(life_stage, age, area, locale)
+    context_note = _build_context_note(life_stage, name, age, area, locale, credit_score, income, checking)
     full_message = message + context_note
 
     response = client.messages.create(
