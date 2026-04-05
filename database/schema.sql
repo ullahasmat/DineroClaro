@@ -17,15 +17,24 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE TABLE IF NOT EXISTS recommendations (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    summary TEXT NOT NULL,
-    action_url TEXT,
-    priority SMALLINT DEFAULT 2,
-    created_at TIMESTAMPTZ DEFAULT now()
+    category TEXT,                 -- 'credit_card' | 'bank' | 'investing_app'
+    name TEXT NOT NULL,
+    provider TEXT,
+    description TEXT NOT NULL,
+    tags TEXT,
+    target_goal TEXT,              -- 'build_credit' | 'save_money' | 'start_investing'
+    target_life_stage TEXT,        -- 'new_arrival' | 'first_gen' | 'established'
+    featured BOOLEAN DEFAULT false
 );
 
-
+CREATE TABLE IF NOT EXISTS user_recommendations (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    recommendation_id INTEGER REFERENCES recommendations(id) ON DELETE CASCADE,
+    dismissed BOOLEAN DEFAULT false,
+    saved BOOLEAN DEFAULT false,
+    shown_at TIMESTAMPTZ DEFAULT now()
+);
 
 
 CREATE TABLE IF NOT EXISTS financial_profiles (
@@ -43,5 +52,6 @@ CREATE TABLE IF NOT EXISTS financial_profiles (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
-CREATE INDEX IF NOT EXISTS idx_recommendations_user_id ON recommendations(user_id);
 CREATE INDEX IF NOT EXISTS idx_financial_profiles_user_id ON financial_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_recommendations_user_id ON user_recommendations(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_recommendations_rec_id ON user_recommendations(recommendation_id);

@@ -65,6 +65,7 @@ export default function TabLayout() {
         options={{ title: labels.profile, tabBarIcon: ({ focused }) => focused ? <Dot /> : null }}
       />
       <Tabs.Screen name="dashboard" options={{ href: null }} />
+      <Tabs.Screen name="recommendations" options={{ href: null }} />
     </Tabs>
   );
 }
