@@ -3,13 +3,33 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   TextInput, Modal, StyleSheet, Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useLocale } from '@/context/AppContext';
+
+const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
+const FF = FONT ? { fontFamily: FONT } : {};
+
+const C = {
+  bg:      '#F0F5FC',
+  card:    '#FFFFFF',
+  border:  '#D6E8F5',
+  navy:    '#1B3B6F',
+  blue:    '#3B73B9',
+  gold:    '#C4991A',
+  text:    '#0E1E3D',
+  text2:   '#4B6080',
+  text3:   '#8FA7C0',
+  green:   '#1A7A56',
+  red:     '#D44242',
+  tintN:   '#EBF0FA',
+  tintG:   '#FDF7E6',
+  tintB:   '#EBF4FF',
+  tintGr:  '#E8F5EF',
+};
 
 const T = {
   en: {
-    eyebrow: '◆ DINERO CLARO ◆',
-    title: 'My finances',
+    eyebrow: 'DINERO CLARO',
+    title: 'My Finances',
     snapshot: 'Your snapshot',
     creditScore: 'CREDIT SCORE',
     goal: 'Goal',
@@ -17,24 +37,23 @@ const T = {
     incomePrompt: 'Monthly income:',
     checking: 'CHECKING',
     checkingPrompt: 'Checking balance:',
-    tapEdit: 'tap to edit',
-    creditCard: 'Credit cards',
+    tapEdit: 'Tap to edit',
+    creditCard: 'Credit Cards',
     used: 'used',
     balance: 'balance',
-    addCard: '＋ Add another card or account',
+    addCard: '+ Add a card or account',
     tipTitle: 'Keep data fresh',
     tipBody: 'Update your numbers monthly for better recommendations.',
-    seeRec: 'See recommendations  ▶▶',
-    modalTitle: '💳  Add a card or account',
+    modalTitle: 'Add a Card or Account',
     cardName: 'Card name',
     currentBalance: 'Current balance',
     creditLimit: 'Credit limit',
     cancel: 'Cancel',
-    add: 'Add  ✓',
+    add: 'Add',
   },
   es: {
-    eyebrow: '◆ DINERO CLARO ◆',
-    title: 'Mis finanzas',
+    eyebrow: 'DINERO CLARO',
+    title: 'Mis Finanzas',
     snapshot: 'Tu resumen',
     creditScore: 'PUNTAJE DE CRÉDITO',
     goal: 'Meta',
@@ -42,67 +61,45 @@ const T = {
     incomePrompt: 'Ingreso mensual:',
     checking: 'CUENTA',
     checkingPrompt: 'Saldo en cuenta:',
-    tapEdit: 'toca para editar',
-    creditCard: 'Tarjetas de crédito',
+    tapEdit: 'Toca para editar',
+    creditCard: 'Tarjetas de Crédito',
     used: 'usado',
     balance: 'saldo',
-    addCard: '＋ Agregar tarjeta o cuenta',
+    addCard: '+ Agregar tarjeta o cuenta',
     tipTitle: 'Mantén tus datos al día',
     tipBody: 'Actualiza tus números cada mes para mejores recomendaciones.',
-    seeRec: 'Ver recomendaciones  ▶▶',
-    modalTitle: '💳  Agregar tarjeta o cuenta',
+    modalTitle: 'Agregar Tarjeta o Cuenta',
     cardName: 'Nombre de la tarjeta',
     currentBalance: 'Saldo actual',
     creditLimit: 'Límite de crédito',
     cancel: 'Cancelar',
-    add: 'Agregar  ✓',
+    add: 'Agregar',
   },
 };
 
 type Card = { name: string; balance: number; limit: number };
 const DEFAULT_CARDS: Card[] = [{ name: 'Discover Secured', balance: 110, limit: 500 }];
 
-const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
-
 function LangToggle() {
   const { locale, setLocale } = useLocale();
   return (
     <View style={lt.wrap}>
-      <TouchableOpacity
-        style={[lt.btn, locale === 'en' && lt.active]}
-        onPress={() => setLocale('en')}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}
-      >
+      <TouchableOpacity style={[lt.btn, locale === 'en' && lt.active]} onPress={() => setLocale('en')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}>
         <Text style={[lt.text, locale === 'en' && lt.activeText]}>EN</Text>
       </TouchableOpacity>
       <View style={lt.divider} />
-      <TouchableOpacity
-        style={[lt.btn, locale === 'es' && lt.active]}
-        onPress={() => setLocale('es')}
-        hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
-      >
+      <TouchableOpacity style={[lt.btn, locale === 'es' && lt.active]} onPress={() => setLocale('es')} hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}>
         <Text style={[lt.text, locale === 'es' && lt.activeText]}>ES</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-function Glow({ color }: { color: string }) {
-  return (
-    <View style={[g.bar, { backgroundColor: color }]} />
-  );
-}
-
-function Stamp({ label, color }: { label: string; color: string }) {
-  return (
-    <View style={[r.stamp, { borderColor: color }]}>
-      <Text style={[r.stampText, { color }]}>{label}</Text>
-    </View>
-  );
+function Divider() {
+  return <View style={{ height: 1, backgroundColor: C.border, marginVertical: 2 }} />;
 }
 
 export default function FinancesScreen() {
-  const router = useRouter();
   const { locale } = useLocale();
   const t = T[locale];
 
@@ -119,10 +116,7 @@ export default function FinancesScreen() {
 
   function addCard() {
     if (!newCard.name.trim()) return;
-    setCards((prev) => [
-      ...prev,
-      { name: newCard.name, balance: parseFloat(newCard.balance) || 0, limit: parseFloat(newCard.limit) || 0 },
-    ]);
+    setCards(prev => [...prev, { name: newCard.name, balance: parseFloat(newCard.balance) || 0, limit: parseFloat(newCard.limit) || 0 }]);
     setNewCard({ name: '', balance: '', limit: '' });
     setModalVisible(false);
   }
@@ -130,74 +124,63 @@ export default function FinancesScreen() {
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
         <View style={s.header}>
-          <View style={s.iconBox}>
-            <Text style={s.icon}>💰</Text>
-          </View>
-          <View style={s.titleBlock}>
+          <View>
             <Text style={s.eyebrow}>{t.eyebrow}</Text>
             <Text style={s.pageTitle}>{t.title}</Text>
           </View>
           <LangToggle />
         </View>
-        <Glow color="#FFD06044" />
 
-        <View style={s.snapshotRow}>
-          <Text style={s.sectionLabel}>{t.snapshot}</Text>
-          <Stamp label="● LIVE" color="#00E5A8" />
-        </View>
-
+        {/* Credit Score */}
         <View style={[s.card, s.cardGold]}>
-          <View style={s.cardTopRow}>
+          <View style={s.cardRow}>
             <Text style={s.cardLabel}>{t.creditScore}</Text>
-            <Text style={s.retroStar}>⭐</Text>
+            <Text style={s.badge}>⭐ Fair</Text>
           </View>
           <Text style={s.scoreValue}>{creditScore}</Text>
-          <View style={s.progressTrack}>
-            <View style={[s.progressFill, { width: `${Math.min(scorePct, 100)}%`, backgroundColor: '#FFD060' }]} />
+          <View style={s.trackWrap}>
+            <View style={[s.trackFill, { width: `${Math.min(scorePct, 100)}%` }]} />
           </View>
           <View style={s.scoreRow}>
             <Text style={s.scoreEdge}>{scoreMin}</Text>
-            <Text style={[s.scoreGoalText, { color: '#FFD060' }]}>▶ {t.goal}: {scoreGoal}</Text>
+            <Text style={s.scoreGoal}>{t.goal}: {scoreGoal}</Text>
           </View>
         </View>
 
+        {/* Income + Checking */}
         <View style={s.grid2}>
-          <TouchableOpacity
-            style={[s.card, s.flex1, s.cardPink]}
-            onPress={() => { const val = prompt(t.incomePrompt, String(income)); if (val) setIncome(parseFloat(val) || income); }}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.incomePrompt, String(income)); if (v) setIncome(parseFloat(v) || income); }} activeOpacity={0.75}>
             <Text style={s.cardLabel}>{t.income}</Text>
-            <Text style={s.retroEmoji}>💵</Text>
+            <Text style={s.cardEmoji}>💵</Text>
             <Text style={s.bigNum}>${income.toLocaleString()}</Text>
-            <Text style={s.editHint}>{t.tapEdit}</Text>
+            <Text style={s.tapHint}>{t.tapEdit}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.card, s.flex1, s.cardViolet]}
-            onPress={() => { const val = prompt(t.checkingPrompt, String(checking)); if (val) setChecking(parseFloat(val) || checking); }}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.checkingPrompt, String(checking)); if (v) setChecking(parseFloat(v) || checking); }} activeOpacity={0.75}>
             <Text style={s.cardLabel}>{t.checking}</Text>
-            <Text style={s.retroEmoji}>🏦</Text>
+            <Text style={s.cardEmoji}>🏦</Text>
             <Text style={s.bigNum}>${checking.toLocaleString()}</Text>
-            <Text style={s.editHint}>{t.tapEdit}</Text>
+            <Text style={s.tapHint}>{t.tapEdit}</Text>
           </TouchableOpacity>
         </View>
 
-        <Glow color="#7B3FFF44" />
+        {/* Credit Cards */}
         <Text style={s.sectionLabel}>{t.creditCard}</Text>
-
         {cards.map((card, i) => {
           const util = card.limit > 0 ? (card.balance / card.limit) * 100 : 0;
+          const good = util < 30;
           return (
-            <View key={i} style={[s.card, s.cardMint]}>
-              <View style={s.cardTopRow}>
+            <View key={i} style={[s.card, { borderLeftWidth: 3, borderLeftColor: good ? C.green : C.red }]}>
+              <View style={s.cardRow}>
                 <Text style={s.cardName}>💳  {card.name}</Text>
-                <Stamp label={`${Math.round(util)}% ${t.used}`} color={util < 30 ? '#00E5A8' : '#FF3B8B'} />
+                <View style={[s.pill, { backgroundColor: good ? C.tintGr : '#FDE8E8' }]}>
+                  <Text style={[s.pillText, { color: good ? C.green : C.red }]}>{Math.round(util)}% {t.used}</Text>
+                </View>
               </View>
-              <View style={s.progressTrack}>
-                <View style={[s.progressFill, { width: `${Math.min(util, 100)}%`, backgroundColor: util < 30 ? '#00E5A8' : '#FF3B8B' }]} />
+              <View style={s.trackWrap}>
+                <View style={[s.trackFill, { width: `${Math.min(util, 100)}%`, backgroundColor: good ? C.green : C.red }]} />
               </View>
               <Text style={s.cardBalance}>${card.balance} {t.balance}</Text>
             </View>
@@ -208,33 +191,31 @@ export default function FinancesScreen() {
           <Text style={s.addCardText}>{t.addCard}</Text>
         </TouchableOpacity>
 
+        {/* Tip */}
         <View style={s.tip}>
-          <Text style={s.tipIcon}>📟</Text>
-          <View style={s.tipTextBlock}>
+          <Text style={s.tipIcon}>💡</Text>
+          <View style={{ flex: 1 }}>
             <Text style={s.tipTitle}>{t.tipTitle}</Text>
             <Text style={s.tipBody}>{t.tipBody}</Text>
           </View>
         </View>
 
-        <TouchableOpacity style={s.recBtn} onPress={() => router.push('/(tabs)/recommendations')} activeOpacity={0.85}>
-          <Text style={s.recBtnText}>{t.seeRec}</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <View style={s.modalOverlay}>
+        <View style={s.overlay}>
           <View style={s.modalCard}>
-            <Glow color="#FFD06066" />
             <Text style={s.modalTitle}>{t.modalTitle}</Text>
-            <TextInput style={s.input} placeholder={t.cardName} placeholderTextColor="#44446A" value={newCard.name} onChangeText={(v) => setNewCard((p) => ({ ...p, name: v }))} />
-            <TextInput style={s.input} placeholder={t.currentBalance} placeholderTextColor="#44446A" keyboardType="numeric" value={newCard.balance} onChangeText={(v) => setNewCard((p) => ({ ...p, balance: v }))} />
-            <TextInput style={s.input} placeholder={t.creditLimit} placeholderTextColor="#44446A" keyboardType="numeric" value={newCard.limit} onChangeText={(v) => setNewCard((p) => ({ ...p, limit: v }))} />
+            <Divider />
+            <TextInput style={s.input} placeholder={t.cardName} placeholderTextColor={C.text3} value={newCard.name} onChangeText={v => setNewCard(p => ({ ...p, name: v }))} />
+            <TextInput style={s.input} placeholder={t.currentBalance} placeholderTextColor={C.text3} keyboardType="numeric" value={newCard.balance} onChangeText={v => setNewCard(p => ({ ...p, balance: v }))} />
+            <TextInput style={s.input} placeholder={t.creditLimit} placeholderTextColor={C.text3} keyboardType="numeric" value={newCard.limit} onChangeText={v => setNewCard(p => ({ ...p, limit: v }))} />
             <View style={s.modalRow}>
-              <TouchableOpacity style={[s.modalBtn, s.modalBtnCancel]} onPress={() => setModalVisible(false)}>
-                <Text style={[s.modalBtnText, { color: '#9090B8' }]}>{t.cancel}</Text>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setModalVisible(false)}>
+                <Text style={s.cancelText}>{t.cancel}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.modalBtn} onPress={addCard}>
-                <Text style={s.modalBtnText}>{t.add}</Text>
+              <TouchableOpacity style={s.addBtn} onPress={addCard}>
+                <Text style={s.addText}>{t.add}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -245,70 +226,58 @@ export default function FinancesScreen() {
 }
 
 const lt = StyleSheet.create({
-  wrap: { flexDirection: 'row', backgroundColor: '#0F0F24', borderRadius: 20, borderWidth: 2, borderColor: '#7B3FFF66', overflow: 'hidden' },
-  btn: { paddingHorizontal: 12, paddingVertical: 5 },
-  active: { backgroundColor: '#7B3FFF' },
-  divider: { width: 1, backgroundColor: '#7B3FFF44' },
-  text: { fontSize: 11, fontWeight: '800', color: '#44446A', letterSpacing: 1, ...(Platform.OS === 'ios' ? { fontFamily: 'Avenir Next' } : {}) },
+  wrap: { flexDirection: 'row', backgroundColor: C.tintN, borderRadius: 20, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  btn: { paddingHorizontal: 12, paddingVertical: 6 },
+  active: { backgroundColor: C.navy },
+  divider: { width: 1, backgroundColor: C.border },
+  text: { fontSize: 11, fontWeight: '700', color: C.text3, letterSpacing: 0.8, ...FF },
   activeText: { color: '#fff' },
 });
 
-const g = StyleSheet.create({
-  bar: { height: 3, borderRadius: 2, marginVertical: 2 },
-});
-
-const r = StyleSheet.create({
-  stamp: { borderWidth: 2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  stampText: { fontSize: 10, fontWeight: '800', letterSpacing: 1, ...(Platform.OS === 'ios' ? { fontFamily: 'Avenir Next' } : {}) },
-});
-
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#08081A' },
-  scroll: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 12 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  iconBox: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#2A1A00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFD06055' },
-  icon: { fontSize: 26 },
-  titleBlock: { flex: 1, gap: 2 },
-  eyebrow: { fontSize: 10, color: '#FFD060', fontWeight: '800', letterSpacing: 2, ...(FONT ? { fontFamily: FONT } : {}) },
-  pageTitle: { fontSize: 26, fontWeight: '800', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
-  snapshotRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionLabel: { fontSize: 12, color: '#9090B8', fontWeight: '600', letterSpacing: 0.5, ...(FONT ? { fontFamily: FONT } : {}) },
-  card: { backgroundColor: '#0F0F24', borderRadius: 20, padding: 16, gap: 8, borderWidth: 1.5, borderColor: 'transparent' },
-  cardGold: { borderColor: '#FFD06033' },
-  cardPink: { borderColor: '#FF3B8B33' },
-  cardViolet: { borderColor: '#7B3FFF44' },
-  cardMint: { borderColor: '#00E5A833' },
-  cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardLabel: { fontSize: 11, color: '#9090B8', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: '700', ...(FONT ? { fontFamily: FONT } : {}) },
-  retroStar: { fontSize: 16 },
-  retroEmoji: { fontSize: 22 },
-  scoreValue: { fontSize: 42, fontWeight: '800', color: '#FFD060', ...(FONT ? { fontFamily: FONT } : {}) },
-  progressTrack: { width: '100%', height: 6, backgroundColor: '#1C1C38', borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#00E5A8', borderRadius: 4 },
+  root: { flex: 1, backgroundColor: C.bg },
+  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 14 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 4 },
+  eyebrow: { fontSize: 10, color: C.blue, fontWeight: '700', letterSpacing: 2, ...FF },
+  pageTitle: { fontSize: 28, fontWeight: '800', color: C.text, marginTop: 2, ...FF },
+  sectionLabel: { fontSize: 12, color: C.text2, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 4, ...FF },
+  card: {
+    backgroundColor: C.card, borderRadius: 18, padding: 18, gap: 8,
+    borderWidth: 1, borderColor: C.border,
+    ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10 }, android: { elevation: 2 } }),
+  },
+  cardGold: { borderTopWidth: 3, borderTopColor: C.gold },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardLabel: { fontSize: 11, color: C.text3, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: '700', ...FF },
+  badge: { fontSize: 11, color: C.gold, fontWeight: '700', backgroundColor: C.tintG, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, ...FF },
+  scoreValue: { fontSize: 48, fontWeight: '800', color: C.gold, letterSpacing: -1, ...FF },
+  trackWrap: { width: '100%', height: 6, backgroundColor: C.tintN, borderRadius: 4, overflow: 'hidden' },
+  trackFill: { height: '100%', backgroundColor: C.gold, borderRadius: 4 },
   scoreRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  scoreEdge: { fontSize: 12, color: '#44446A' },
-  scoreGoalText: { fontSize: 12, fontWeight: '700' },
+  scoreEdge: { fontSize: 12, color: C.text3 },
+  scoreGoal: { fontSize: 12, color: C.blue, fontWeight: '600', ...FF },
   grid2: { flexDirection: 'row', gap: 12 },
   flex1: { flex: 1 },
-  bigNum: { fontSize: 22, fontWeight: '800', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
-  editHint: { fontSize: 10, color: '#3C3C5C', letterSpacing: 0.5 },
-  cardName: { fontSize: 15, fontWeight: '700', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
-  cardBalance: { fontSize: 12, color: '#9090B8' },
-  addCard: { borderWidth: 1.5, borderColor: '#1C1C38', borderStyle: 'dashed', borderRadius: 20, padding: 16, alignItems: 'center' },
-  addCardText: { color: '#44446A', fontSize: 14, fontWeight: '600' },
-  tip: { backgroundColor: '#0C0C1E', borderRadius: 20, padding: 14, borderWidth: 1.5, borderColor: '#00E5A822', flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  tipTextBlock: { flex: 1 },
-  tipIcon: { fontSize: 22, marginTop: 2 },
-  tipTitle: { fontSize: 14, fontWeight: '800', color: '#00E5A8', ...(FONT ? { fontFamily: FONT } : {}) },
-  tipBody: { fontSize: 13, color: '#9090B8', lineHeight: 18, marginTop: 2 },
-  recBtn: { backgroundColor: '#7B3FFF', borderRadius: 50, paddingVertical: 15, alignItems: 'center', borderWidth: 0 },
-  recBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.8, ...(FONT ? { fontFamily: FONT } : {}) },
-  modalOverlay: { flex: 1, backgroundColor: '#000000CC', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#0F0F24', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 12, borderTopWidth: 1.5, borderColor: '#FFD060' },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4, ...(FONT ? { fontFamily: FONT } : {}) },
-  input: { backgroundColor: '#15152C', borderWidth: 1.5, borderColor: '#1C1C38', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, color: '#fff', fontSize: 14 },
+  cardEmoji: { fontSize: 24, marginVertical: 2 },
+  bigNum: { fontSize: 22, fontWeight: '800', color: C.text, ...FF },
+  tapHint: { fontSize: 10, color: C.text3, letterSpacing: 0.5 },
+  cardName: { fontSize: 15, fontWeight: '700', color: C.text, ...FF },
+  cardBalance: { fontSize: 12, color: C.text2 },
+  pill: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  pillText: { fontSize: 11, fontWeight: '700', ...FF },
+  addCard: { borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', borderRadius: 16, padding: 16, alignItems: 'center' },
+  addCardText: { color: C.blue, fontSize: 14, fontWeight: '600', ...FF },
+  tip: { backgroundColor: C.tintB, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  tipIcon: { fontSize: 20, marginTop: 1 },
+  tipTitle: { fontSize: 14, fontWeight: '700', color: C.navy, ...FF },
+  tipBody: { fontSize: 13, color: C.text2, lineHeight: 19, marginTop: 2 },
+  overlay: { flex: 1, backgroundColor: '#0E1E3D99', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 12, borderTopWidth: 3, borderColor: C.gold },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: C.text, ...FF },
+  input: { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 13, color: C.text, fontSize: 14 },
   modalRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  modalBtn: { flex: 1, backgroundColor: '#7B3FFF', borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
-  modalBtnCancel: { backgroundColor: '#15152C', borderWidth: 1.5, borderColor: '#1C1C38' },
-  modalBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', ...(FONT ? { fontFamily: FONT } : {}) },
+  cancelBtn: { flex: 1, backgroundColor: C.bg, borderRadius: 50, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+  cancelText: { color: C.text2, fontSize: 15, fontWeight: '700', ...FF },
+  addBtn: { flex: 1, backgroundColor: C.navy, borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
+  addText: { color: '#fff', fontSize: 15, fontWeight: '700', ...FF },
 });

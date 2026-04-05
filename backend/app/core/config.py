@@ -14,6 +14,7 @@ for env_path in (ROOT_ENV, BACKEND_ENV):
 
 class Settings(BaseSettings):
     openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
     supabase_url: str | None = None
     supabase_key: str | None = None
     database_url: str = "postgresql://postgres:postgres@localhost:5432/dineroclaro"
