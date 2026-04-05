@@ -7,42 +7,42 @@ const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 const FF = FONT ? { fontFamily: FONT } : {};
 
 const C = {
-  bg:     '#F0F5FC',
-  card:   '#FFFFFF',
-  border: '#D6E8F5',
-  navy:   '#1B3B6F',
-  blue:   '#3B73B9',
-  gold:   '#C4991A',
-  text:   '#0E1E3D',
-  text2:  '#4B6080',
-  text3:  '#8FA7C0',
-  tintN:  '#EBF0FA',
-  tintG:  '#FDF7E6',
+  bg:     '#EEF3FB',
+  card:   'rgba(255,255,255,0.95)',
+  border: 'rgba(190,210,235,0.6)',
+  navy:   '#162F5A',
+  blue:   '#2B6CB0',
+  gold:   '#E8A817',
+  text:   '#0A1628',
+  text2:  '#3D5575',
+  text3:  '#7A95B4',
+  green:  '#0E9A5E',
+  tintN:  'rgba(230,238,252,0.9)',
+  tintG:  'rgba(255,248,225,0.9)',
 };
 
 const FEATURES = [
-  { emoji: '💰', label: 'Home',    title: 'My Finances', desc: 'Track your credit score, income & cards.',     accent: C.navy,  bg: C.tintN },
-  { emoji: '📚', label: 'Learn',   title: 'Learn',       desc: 'Bite-sized financial education.',              accent: C.blue,  bg: '#EBF4FF' },
-  { emoji: '🤖', label: 'Lana',    title: 'Lana AI',     desc: 'Your bilingual financial advisor.',            accent: C.gold,  bg: C.tintG },
-  { emoji: '⭐', label: 'Profile', title: 'Profile',     desc: 'Life stage settings & your account.',          accent: '#1A7A56', bg: '#E8F5EF' },
+  { emoji: '💰', label: 'Home' },
+  { emoji: '📚', label: 'Learn' },
+  { emoji: '🤖', label: 'Lana' },
+  { emoji: '🗂️', label: 'Vault' },
+  { emoji: '👤', label: 'Profile' },
 ];
 
-const STAGES: { key: LifeStage; emoji: string; label: string; desc: string; accent: string; bg: string }[] = [
-  { key: 'new-arrival',  emoji: '✈️', label: 'New Arrival',  desc: 'Just arrived — building your foundation.',     accent: '#1A7A56', bg: '#E8F5EF' },
-  { key: 'first-gen',    emoji: '🌟', label: 'First Gen',    desc: 'First generation navigating U.S. finance.',     accent: C.blue,   bg: '#EBF4FF' },
-  { key: 'established',  emoji: '👑', label: 'Established',  desc: "Growing and protecting what you've earned.",    accent: C.gold,   bg: C.tintG },
+const STAGES: { key: LifeStage; emoji: string; label: string }[] = [
+  { key: 'new-arrival', emoji: '✈️', label: 'New Arrival' },
+  { key: 'first-gen',   emoji: '🌟', label: 'First Gen' },
+  { key: 'established', emoji: '👑', label: 'Established' },
 ];
 
-function ProgressBar({ step, total }: { step: number; total: number }) {
+const STAGE_COLORS: Record<LifeStage, string> = { 'new-arrival': '#0E9A5E', 'first-gen': '#2B6CB0', 'established': '#E8A817' };
+
+function ProgressDots({ step, total }: { step: number; total: number }) {
   return (
-    <View style={p.wrap}>
-      <View style={p.row}>
-        <Text style={p.label}>Step {step} of {total}</Text>
-        <Text style={p.pct}>{Math.round((step / total) * 100)}%</Text>
-      </View>
-      <View style={p.track}>
-        <View style={[p.fill, { width: `${(step / total) * 100}%` }]} />
-      </View>
+    <View style={p.row}>
+      {Array.from({ length: total }).map((_, i) => (
+        <View key={i} style={[p.dot, i < step && p.dotActive]} />
+      ))}
     </View>
   );
 }
@@ -51,75 +51,63 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   const { lifeStage, setLifeStage } = useLocale();
 
   return (
-    <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+    <View style={s.page}>
+      {/* Brand */}
       <View style={s.brandRow}>
-        <View style={s.brandIcon}>
-          <Text style={s.brandStar}>✦</Text>
-        </View>
-        <View>
-          <Text style={s.brandName}>DineroClaro</Text>
-          <Text style={s.brandTagline}>Financial clarity for everyone</Text>
-        </View>
+        <View style={s.brandIcon}><Text style={s.brandStar}>✦</Text></View>
+        <Text style={s.brandName}>DineroClaro</Text>
       </View>
 
-      <ProgressBar step={1} total={3} />
+      <ProgressDots step={1} total={3} />
 
-      <Text style={s.heading}>Welcome to your{'\n'}money HQ 👋</Text>
-      <Text style={s.sub}>Four powerful tools. One app. Built for the Hispanic community.</Text>
+      <Text style={s.heading}>Welcome 👋</Text>
+      <Text style={s.sub}>Financial clarity for the Hispanic community.</Text>
 
-      <View style={s.featureGrid}>
+      {/* Feature pills — horizontal row */}
+      <View style={s.featureRow}>
         {FEATURES.map(f => (
-          <View key={f.label} style={[s.featureCard, { backgroundColor: f.bg, borderColor: f.accent + '33' }]}>
-            <View style={[s.featureIconBox, { backgroundColor: C.card, borderColor: f.accent + '44' }]}>
-              <Text style={{ fontSize: 22 }}>{f.emoji}</Text>
-            </View>
-            <View style={[s.featureBadge, { backgroundColor: f.accent }]}>
-              <Text style={s.featureBadgeText}>{f.label}</Text>
-            </View>
-            <Text style={[s.featureTitle, { color: f.accent }]}>{f.title}</Text>
-            <Text style={s.featureDesc}>{f.desc}</Text>
+          <View key={f.label} style={s.featurePill}>
+            <Text style={{ fontSize: 18 }}>{f.emoji}</Text>
+            <Text style={s.featureLabel}>{f.label}</Text>
           </View>
         ))}
       </View>
 
-      <Text style={s.stageHeading}>What's your life stage?</Text>
-      <Text style={s.stageSub}>You can always change this in your Profile settings.</Text>
-
-      <View style={s.stageList}>
+      {/* Life stage — compact */}
+      <Text style={s.stageHeading}>Your life stage</Text>
+      <View style={s.stageRow}>
         {STAGES.map(st => {
           const active = lifeStage === st.key;
+          const color = STAGE_COLORS[st.key];
           return (
             <TouchableOpacity
               key={st.key}
-              style={[s.stageRow, active ? { backgroundColor: st.bg, borderColor: st.accent + '66' } : { backgroundColor: C.card, borderColor: C.border }]}
+              style={[s.stageChip, active && { backgroundColor: color, borderColor: color }]}
               onPress={() => setLifeStage(st.key)}
               activeOpacity={0.8}
             >
-              <View style={[s.radio, active && { backgroundColor: st.accent, borderColor: st.accent }]}>
-                {active && <View style={s.radioDot} />}
-              </View>
-              <Text style={{ fontSize: 20, width: 28 }}>{st.emoji}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[s.stageLabel, { color: active ? st.accent : C.text }]}>{st.label}</Text>
-                <Text style={s.stageDesc}>{st.desc}</Text>
-              </View>
+              <Text style={{ fontSize: 16 }}>{st.emoji}</Text>
+              <Text style={[s.stageLabel, active && { color: '#fff' }]}>{st.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <TouchableOpacity style={s.cta} onPress={onNext} activeOpacity={0.85}>
-        <Text style={s.ctaText}>Get started  →</Text>
-      </TouchableOpacity>
-      <Text style={s.privacy}>Free · No bank connection · Private</Text>
-    </ScrollView>
+      {/* CTA */}
+      <View style={s.ctaWrap}>
+        <TouchableOpacity style={s.cta} onPress={onNext} activeOpacity={0.85}>
+          <Text style={s.ctaText}>Get started  →</Text>
+        </TouchableOpacity>
+        <Text style={s.privacy}>Free · No bank connection · Private</Text>
+      </View>
+    </View>
   );
 }
 
 function FinancesStep({ onNext }: { onNext: () => void }) {
   const { setFinancialProfile } = useLocale();
   const [form, setForm] = useState({ creditScore: '', income: '', checking: '', cardBalance: '', cardLimit: '' });
-  const set = (f: keyof typeof form) => (v: string) => setForm(p => ({ ...p, [f]: v }));
+  const set = (f: keyof typeof form) => (v: string) => setForm(prev => ({ ...prev, [f]: v }));
 
   function handleNext() {
     setFinancialProfile({
@@ -134,18 +122,16 @@ function FinancesStep({ onNext }: { onNext: () => void }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <View style={s.stepIconWrap}>
-        <Text style={{ fontSize: 28 }}>💳</Text>
-      </View>
-      <ProgressBar step={2} total={3} />
+    <ScrollView contentContainerStyle={s.scrollPage} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <Text style={{ fontSize: 28 }}>💳</Text>
+      <ProgressDots step={2} total={3} />
       <Text style={s.heading}>Your finances</Text>
-      <Text style={s.sub}>We never connect to your bank. Update any time from the app.</Text>
+      <Text style={s.sub}>We never connect to your bank. Update any time.</Text>
 
       {[
-        { key: 'creditScore', label: 'Approx. credit score', ph: 'e.g. 640' },
-        { key: 'income',      label: 'Monthly income',       ph: 'e.g. 2,400' },
-        { key: 'checking',    label: 'Checking balance',     ph: 'e.g. 1,200' },
+        { key: 'creditScore', label: 'Credit score', ph: '640' },
+        { key: 'income',      label: 'Monthly income', ph: '2,400' },
+        { key: 'checking',    label: 'Checking balance', ph: '1,200' },
       ].map(field => (
         <View key={field.key}>
           <Text style={s.inputLabel}>{field.label}</Text>
@@ -153,41 +139,43 @@ function FinancesStep({ onNext }: { onNext: () => void }) {
         </View>
       ))}
 
-      <Text style={s.inputLabel}>Credit card  (balance / limit)</Text>
+      <Text style={s.inputLabel}>Credit card (balance / limit)</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <TextInput style={[s.input, { flex: 1 }]} placeholder="Balance" placeholderTextColor={C.text3} keyboardType="numeric" value={form.cardBalance} onChangeText={set('cardBalance')} />
         <Text style={{ color: C.text3, fontSize: 18 }}>/</Text>
         <TextInput style={[s.input, { flex: 1 }]} placeholder="Limit" placeholderTextColor={C.text3} keyboardType="numeric" value={form.cardLimit} onChangeText={set('cardLimit')} />
       </View>
 
-      <TouchableOpacity style={[s.cta, { marginTop: 8 }]} onPress={handleNext} activeOpacity={0.85}>
+      <TouchableOpacity style={[s.cta, { marginTop: 12 }]} onPress={handleNext} activeOpacity={0.85}>
         <Text style={s.ctaText}>Continue  →</Text>
       </TouchableOpacity>
-      <Text style={[s.privacy, { textDecorationLine: 'underline' }]} onPress={handleNext}>Skip for now</Text>
+      <TouchableOpacity onPress={handleNext}><Text style={s.skipText}>Skip for now</Text></TouchableOpacity>
     </ScrollView>
   );
 }
 
 function DoneStep({ onFinish }: { onFinish: () => void }) {
   return (
-    <View style={s.doneWrap}>
-      <ProgressBar step={3} total={3} />
+    <View style={s.page}>
+      <ProgressDots step={3} total={3} />
       <View style={s.doneRing}>
         <Text style={{ fontSize: 36, color: C.gold }}>✦</Text>
       </View>
       <Text style={[s.heading, { textAlign: 'center' }]}>You're all set!</Text>
       <Text style={[s.sub, { textAlign: 'center' }]}>Lana is ready to guide you.{'\n'}Your financial journey starts now.</Text>
-      <View style={s.donePills}>
+      <View style={s.featureRow}>
         {FEATURES.map(f => (
-          <View key={f.label} style={[s.donePill, { backgroundColor: f.bg, borderColor: f.accent + '44' }]}>
+          <View key={f.label} style={s.featurePill}>
             <Text style={{ fontSize: 16 }}>{f.emoji}</Text>
-            <Text style={[s.donePillText, { color: f.accent }]}>{f.label}</Text>
+            <Text style={s.featureLabel}>{f.label}</Text>
           </View>
         ))}
       </View>
-      <TouchableOpacity style={s.cta} onPress={onFinish} activeOpacity={0.85}>
-        <Text style={s.ctaText}>Build my plan  ✦</Text>
-      </TouchableOpacity>
+      <View style={s.ctaWrap}>
+        <TouchableOpacity style={s.cta} onPress={onFinish} activeOpacity={0.85}>
+          <Text style={s.ctaText}>Build my plan  ✦</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -205,47 +193,63 @@ export default function OnboardingScreen() {
 }
 
 const p = StyleSheet.create({
-  wrap: { width: '100%', gap: 6, marginBottom: 20 },
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
-  label: { fontSize: 11, color: C.text3, fontWeight: '600', letterSpacing: 0.5 },
-  pct: { fontSize: 11, color: C.blue, fontWeight: '700' },
-  track: { width: '100%', height: 4, backgroundColor: C.border, borderRadius: 4, overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: C.gold, borderRadius: 4 },
+  row: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: 16 },
+  dot: { width: 28, height: 4, borderRadius: 2, backgroundColor: C.border },
+  dotActive: { backgroundColor: C.gold },
 });
 
 const s = StyleSheet.create({
-  scroll: { paddingHorizontal: 24, paddingTop: Platform.OS === 'ios' ? 64 : 48, paddingBottom: 48, gap: 6 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 28 },
-  brandIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.tintN, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
-  brandStar: { fontSize: 20, color: C.navy },
+  page: {
+    flex: 1, paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
+    paddingBottom: 32, justifyContent: 'space-between',
+  },
+  scrollPage: {
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
+    paddingBottom: 48, gap: 4,
+  },
+
+  /* Brand */
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  brandIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: C.tintN, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
+  brandStar: { fontSize: 16, color: C.navy },
   brandName: { fontSize: 18, fontWeight: '800', color: C.text, ...FF },
-  brandTagline: { fontSize: 11, color: C.text3 },
-  heading: { fontSize: 30, fontWeight: '800', color: C.text, lineHeight: 38, marginBottom: 6, ...FF },
-  sub: { fontSize: 14, color: C.text2, lineHeight: 21, marginBottom: 16 },
-  featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  featureCard: { width: '47%', borderRadius: 18, padding: 14, borderWidth: 1, gap: 8 },
-  featureIconBox: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  featureBadge: { alignSelf: 'flex-start', borderRadius: 50, paddingHorizontal: 10, paddingVertical: 3 },
-  featureBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 1, ...FF },
-  featureTitle: { fontSize: 14, fontWeight: '800', ...FF },
-  featureDesc: { fontSize: 11, color: C.text2, lineHeight: 15 },
-  stageHeading: { fontSize: 18, fontWeight: '800', color: C.text, marginTop: 8, marginBottom: 4, ...FF },
-  stageSub: { fontSize: 12, color: C.text3, marginBottom: 14 },
-  stageList: { gap: 10, marginBottom: 20 },
-  stageRow: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 16, padding: 14, borderWidth: 1 },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
-  stageLabel: { fontSize: 14, fontWeight: '800', ...FF },
-  stageDesc: { fontSize: 12, color: C.text3, lineHeight: 16, marginTop: 1 },
-  stepIconWrap: { width: 58, height: 58, borderRadius: 18, backgroundColor: C.tintN, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border, marginBottom: 16 },
-  inputLabel: { fontSize: 12, color: C.text2, fontWeight: '600', marginBottom: 6, marginTop: 4, ...FF },
-  input: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, color: C.text, fontSize: 14, marginBottom: 4 },
-  cta: { width: '100%', backgroundColor: C.navy, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginTop: 12 },
-  ctaText: { color: '#fff', fontSize: 16, fontWeight: '800', ...FF },
-  privacy: { fontSize: 12, color: C.text3, textAlign: 'center', marginTop: 10 },
-  doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 16 },
-  doneRing: { width: 84, height: 84, borderRadius: 42, backgroundColor: C.tintG, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.gold + '66' },
-  donePills: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginVertical: 4 },
-  donePill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1 },
-  donePillText: { fontSize: 12, fontWeight: '800', ...FF },
+
+  /* Text */
+  heading: { fontSize: 28, fontWeight: '200', color: C.text, letterSpacing: -0.5, marginBottom: 4, ...FF },
+  sub: { fontSize: 14, color: C.text2, lineHeight: 20, marginBottom: 8 },
+
+  /* Feature pills — horizontal */
+  featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginVertical: 8 },
+  featurePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: C.card, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: C.border,
+  },
+  featureLabel: { fontSize: 12, fontWeight: '600', color: C.text2, ...FF },
+
+  /* Life stage — compact chips */
+  stageHeading: { fontSize: 14, fontWeight: '700', color: C.text, marginBottom: 8, ...FF },
+  stageRow: { flexDirection: 'row', gap: 8 },
+  stageChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: C.card, borderRadius: 50, paddingVertical: 12,
+    borderWidth: 1.5, borderColor: C.border,
+  },
+  stageLabel: { fontSize: 12, fontWeight: '700', color: C.text, ...FF },
+
+  /* CTA */
+  ctaWrap: { gap: 8, marginTop: 8 },
+  cta: { width: '100%', backgroundColor: C.navy, borderRadius: 50, paddingVertical: 16, alignItems: 'center' },
+  ctaText: { color: '#fff', fontSize: 16, fontWeight: '700', ...FF },
+  privacy: { fontSize: 11, color: C.text3, textAlign: 'center' },
+
+  /* Forms */
+  inputLabel: { fontSize: 12, color: C.text2, fontWeight: '600', marginBottom: 4, marginTop: 6, ...FF },
+  input: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, color: C.text, fontSize: 14, marginBottom: 2 },
+  skipText: { color: C.blue, fontSize: 13, fontWeight: '600', textAlign: 'center', marginTop: 10, textDecorationLine: 'underline', ...FF },
+
+  /* Done */
+  doneRing: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.tintG, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.gold + '55', alignSelf: 'center' },
 });
