@@ -47,25 +47,85 @@ function ProgressDots({ step, total }: { step: number; total: number }) {
   );
 }
 
+const T = {
+  en: {
+    welcome: 'Welcome 👋',
+    sub: 'Financial clarity for the Hispanic community.',
+    whatsInside: "WHAT'S INSIDE",
+    selectStage: 'SELECT YOUR STAGE',
+    getStarted: 'Get started  →',
+    privacy: 'Free · No bank connection · Private',
+    finances: 'Your finances',
+    finSub: 'We never connect to your bank. Update any time.',
+    creditScore: 'Credit score',
+    monthlyIncome: 'Monthly income',
+    checkingBal: 'Checking balance',
+    cardLabel: 'Credit card (balance / limit)',
+    cont: 'Continue  →',
+    skip: 'Skip for now',
+    done: "You're all set!",
+    doneSub: 'Lana is ready to guide you.\nYour financial journey starts now.',
+    buildPlan: 'Build my plan  ✦',
+  },
+  es: {
+    welcome: 'Bienvenido 👋',
+    sub: 'Claridad financiera para la comunidad hispana.',
+    whatsInside: 'QUÉ INCLUYE',
+    selectStage: 'SELECCIONA TU ETAPA',
+    getStarted: 'Comenzar  →',
+    privacy: 'Gratis · Sin conexión bancaria · Privado',
+    finances: 'Tus finanzas',
+    finSub: 'Nunca nos conectamos a tu banco. Actualiza cuando quieras.',
+    creditScore: 'Puntaje de crédito',
+    monthlyIncome: 'Ingreso mensual',
+    checkingBal: 'Saldo en cuenta',
+    cardLabel: 'Tarjeta de crédito (saldo / límite)',
+    cont: 'Continuar  →',
+    skip: 'Saltar por ahora',
+    done: '¡Todo listo!',
+    doneSub: 'Lana está lista para guiarte.\nTu camino financiero empieza ahora.',
+    buildPlan: 'Crear mi plan  ✦',
+  },
+};
+
+function LangToggle() {
+  const { locale, setLocale } = useLocale();
+  return (
+    <View style={lt.wrap}>
+      <TouchableOpacity style={[lt.btn, locale === 'en' && lt.active]} onPress={() => setLocale('en')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}>
+        <Text style={[lt.text, locale === 'en' && lt.activeText]}>EN</Text>
+      </TouchableOpacity>
+      <View style={lt.divider} />
+      <TouchableOpacity style={[lt.btn, locale === 'es' && lt.active]} onPress={() => setLocale('es')} hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}>
+        <Text style={[lt.text, locale === 'es' && lt.activeText]}>ES</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function WelcomeStep({ onNext }: { onNext: () => void }) {
-  const { lifeStage, setLifeStage } = useLocale();
+  const { locale, lifeStage, setLifeStage } = useLocale();
+  const t = T[locale];
 
   return (
     <View style={s.page}>
-      {/* Brand */}
+      {/* Brand + Lang */}
       <View style={s.brandRow}>
-        <View style={s.brandIcon}><Text style={s.brandStar}>✦</Text></View>
-        <Text style={s.brandName}>DineroClaro</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+          <View style={s.brandIcon}><Text style={s.brandStar}>✦</Text></View>
+          <Text style={s.brandName}>DineroClaro</Text>
+        </View>
+        <LangToggle />
       </View>
 
       <ProgressDots step={1} total={3} />
 
-      <Text style={s.heading}>Welcome 👋</Text>
-      <Text style={s.sub}>Financial clarity for the Hispanic community.</Text>
+      <Text style={s.heading}>{t.welcome}</Text>
+      <Text style={s.sub}>{t.sub}</Text>
 
       {/* What's inside — muted display-only grid */}
       <View style={s.featureCard}>
-        <Text style={s.featureCardLabel}>WHAT'S INSIDE</Text>
+        <Text style={s.featureCardLabel}>{t.whatsInside}</Text>
         <View style={s.featureGrid}>
           {FEATURES.map(f => (
             <View key={f.label} style={s.featureItem}>
@@ -80,7 +140,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 
       {/* Life stage — interactive selector */}
       <View style={s.stageCard}>
-        <Text style={s.stageCardLabel}>SELECT YOUR STAGE</Text>
+        <Text style={s.stageCardLabel}>{t.selectStage}</Text>
         <View style={s.stageRow}>
           {STAGES.map(st => {
             const active = lifeStage === st.key;
@@ -103,16 +163,17 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       {/* CTA */}
       <View style={s.ctaWrap}>
         <TouchableOpacity style={s.cta} onPress={onNext} activeOpacity={0.85}>
-          <Text style={s.ctaText}>Get started  →</Text>
+          <Text style={s.ctaText}>{t.getStarted}</Text>
         </TouchableOpacity>
-        <Text style={s.privacy}>Free · No bank connection · Private</Text>
+        <Text style={s.privacy}>{t.privacy}</Text>
       </View>
     </View>
   );
 }
 
 function FinancesStep({ onNext }: { onNext: () => void }) {
-  const { setFinancialProfile } = useLocale();
+  const { locale, setFinancialProfile } = useLocale();
+  const t = T[locale];
   const [form, setForm] = useState({ creditScore: '', income: '', checking: '', cardBalance: '', cardLimit: '' });
   const set = (f: keyof typeof form) => (v: string) => setForm(prev => ({ ...prev, [f]: v }));
 
@@ -132,13 +193,13 @@ function FinancesStep({ onNext }: { onNext: () => void }) {
     <ScrollView contentContainerStyle={s.scrollPage} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <Text style={{ fontSize: 28 }}>💳</Text>
       <ProgressDots step={2} total={3} />
-      <Text style={s.heading}>Your finances</Text>
-      <Text style={s.sub}>We never connect to your bank. Update any time.</Text>
+      <Text style={s.heading}>{t.finances}</Text>
+      <Text style={s.sub}>{t.finSub}</Text>
 
       {[
-        { key: 'creditScore', label: 'Credit score', ph: '640' },
-        { key: 'income',      label: 'Monthly income', ph: '2,400' },
-        { key: 'checking',    label: 'Checking balance', ph: '1,200' },
+        { key: 'creditScore', label: t.creditScore, ph: '640' },
+        { key: 'income',      label: t.monthlyIncome, ph: '2,400' },
+        { key: 'checking',    label: t.checkingBal, ph: '1,200' },
       ].map(field => (
         <View key={field.key}>
           <Text style={s.inputLabel}>{field.label}</Text>
@@ -146,7 +207,7 @@ function FinancesStep({ onNext }: { onNext: () => void }) {
         </View>
       ))}
 
-      <Text style={s.inputLabel}>Credit card (balance / limit)</Text>
+      <Text style={s.inputLabel}>{t.cardLabel}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <TextInput style={[s.input, { flex: 1 }]} placeholder="Balance" placeholderTextColor={C.text3} keyboardType="numeric" value={form.cardBalance} onChangeText={set('cardBalance')} />
         <Text style={{ color: C.text3, fontSize: 18 }}>/</Text>
@@ -154,22 +215,24 @@ function FinancesStep({ onNext }: { onNext: () => void }) {
       </View>
 
       <TouchableOpacity style={[s.cta, { marginTop: 12 }]} onPress={handleNext} activeOpacity={0.85}>
-        <Text style={s.ctaText}>Continue  →</Text>
+        <Text style={s.ctaText}>{t.cont}</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={handleNext}><Text style={s.skipText}>Skip for now</Text></TouchableOpacity>
+      <TouchableOpacity onPress={handleNext}><Text style={s.skipText}>{t.skip}</Text></TouchableOpacity>
     </ScrollView>
   );
 }
 
 function DoneStep({ onFinish }: { onFinish: () => void }) {
+  const { locale } = useLocale();
+  const t = T[locale];
   return (
     <View style={s.page}>
       <ProgressDots step={3} total={3} />
       <View style={s.doneRing}>
         <Text style={{ fontSize: 36, color: C.gold }}>✦</Text>
       </View>
-      <Text style={[s.heading, { textAlign: 'center' }]}>You're all set!</Text>
-      <Text style={[s.sub, { textAlign: 'center' }]}>Lana is ready to guide you.{'\n'}Your financial journey starts now.</Text>
+      <Text style={[s.heading, { textAlign: 'center' }]}>{t.done}</Text>
+      <Text style={[s.sub, { textAlign: 'center' }]}>{t.doneSub}</Text>
       <View style={s.featureRow}>
         {FEATURES.map(f => (
           <View key={f.label} style={s.featurePill}>
@@ -180,7 +243,7 @@ function DoneStep({ onFinish }: { onFinish: () => void }) {
       </View>
       <View style={s.ctaWrap}>
         <TouchableOpacity style={s.cta} onPress={onFinish} activeOpacity={0.85}>
-          <Text style={s.ctaText}>Build my plan  ✦</Text>
+          <Text style={s.ctaText}>{t.buildPlan}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -198,6 +261,15 @@ export default function OnboardingScreen() {
     </View>
   );
 }
+
+const lt = StyleSheet.create({
+  wrap: { flexDirection: 'row', backgroundColor: 'rgba(230,238,252,0.9)', borderRadius: 20, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  btn: { paddingHorizontal: 12, paddingVertical: 6 },
+  active: { backgroundColor: C.navy },
+  divider: { width: 1, backgroundColor: C.border },
+  text: { fontSize: 11, fontWeight: '700', color: C.text3, letterSpacing: 0.8, ...FF },
+  activeText: { color: '#fff' },
+});
 
 const p = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: 16 },
