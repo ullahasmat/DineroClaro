@@ -147,6 +147,7 @@ export default function VaultScreen() {
   const [showScan, setShowScan] = useState(false);
   const [scanText, setScanText] = useState('');
   const [scanImage, setScanImage] = useState<string | null>(null);
+  const [scanBase64, setScanBase64] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ summary: string; legitimacy: Doc['legitimacy']; suggestedCategory: DocCategory } | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
@@ -173,9 +174,8 @@ export default function VaultScreen() {
     const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
       setScanImage(result.assets[0].uri);
-      if (result.assets[0].base64) {
-        setScanText(`[Image captured — analyzing visually]\n\nBase64 image attached for analysis.`);
-      }
+      setScanBase64(result.assets[0].base64 ?? null);
+      setScanText('');
     }
   }
 
@@ -185,9 +185,8 @@ export default function VaultScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
       setScanImage(result.assets[0].uri);
-      if (result.assets[0].base64) {
-        setScanText(`[Image selected — analyzing visually]\n\nBase64 image attached for analysis.`);
-      }
+      setScanBase64(result.assets[0].base64 ?? null);
+      setScanText('');
     }
   }
 
@@ -195,16 +194,24 @@ export default function VaultScreen() {
 
   async function scanDocument() {
     const text = scanText.trim();
-    if (!text) return;
+    if (!text && !scanBase64) return;
     setScanning(true);
     setScanResult(null);
 
     try {
       const url = `${API_BASE}/scan/`;
+      const body: Record<string, string | null> = { locale };
+      if (scanBase64) {
+        body.image_base64 = scanBase64;
+        body.image_media_type = 'image/jpeg';
+      }
+      if (text) {
+        body.document = text;
+      }
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ document: text, locale }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) throw new Error(`Server ${res.status}`);
@@ -223,7 +230,11 @@ export default function VaultScreen() {
           const parsed = JSON.parse(jsonMatch[0]);
           const legit = ['legit', 'suspicious', 'scam'].includes(parsed.legitimacy) ? parsed.legitimacy : 'suspicious';
           const cat = ['important', 'sensitive', 'trash'].includes(parsed.category) ? parsed.category : (legit === 'scam' ? 'trash' : 'important');
-          setScanResult({ summary: parsed.summary || reply, legitimacy: legit as Doc['legitimacy'], suggestedCategory: cat as DocCategory });
+          const extracted = parsed.extracted_text ?? '';
+          const fullSummary = extracted
+            ? `${parsed.summary || reply}\n\n📝 ${locale === 'en' ? 'Extracted text' : 'Texto extraído'}:\n${extracted}`
+            : (parsed.summary || reply);
+          setScanResult({ summary: fullSummary, legitimacy: legit as Doc['legitimacy'], suggestedCategory: cat as DocCategory });
           return;
         } catch { /* fall through */ }
       }
@@ -297,7 +308,7 @@ export default function VaultScreen() {
         </View>
 
         {/* Scan Button */}
-        <TouchableOpacity style={s.scanBtn} onPress={() => { setShowScan(true); setScanResult(null); setScanText(''); setScanImage(null); }} activeOpacity={0.8}>
+        <TouchableOpacity style={s.scanBtn} onPress={() => { setShowScan(true); setScanResult(null); setScanText(''); setScanImage(null); setScanBase64(null); }} activeOpacity={0.8}>
           <Text style={s.scanBtnEmoji}>📷</Text>
           <Text style={s.scanBtnText}>{t.scanTitle}</Text>
         </TouchableOpacity>
@@ -374,7 +385,7 @@ export default function VaultScreen() {
               {scanImage && (
                 <View style={[s.imagePreview, { marginTop: 12 }]}>
                   <Image source={{ uri: scanImage }} style={s.previewImg} resizeMode="cover" />
-                  <TouchableOpacity style={s.removeImg} onPress={() => { setScanImage(null); setScanText(''); }}>
+                  <TouchableOpacity style={s.removeImg} onPress={() => { setScanImage(null); setScanBase64(null); setScanText(''); }}>
                     <Text style={s.removeImgText}>✕</Text>
                   </TouchableOpacity>
                 </View>
@@ -385,7 +396,7 @@ export default function VaultScreen() {
               <TextInput
                 style={s.scanInput}
                 value={scanText}
-                onChangeText={(v) => { setScanText(v); setScanImage(null); }}
+                onChangeText={(v) => { setScanText(v); setScanImage(null); setScanBase64(null); }}
                 placeholder={t.scanPlaceholder}
                 placeholderTextColor={C.text3}
                 multiline
@@ -441,7 +452,7 @@ export default function VaultScreen() {
               {scanResult && !scanning && (
                 <TouchableOpacity
                   style={[s.scanAgainBtn, { marginBottom: 8 }]}
-                  onPress={() => { setScanResult(null); setScanText(''); setScanImage(null); }}
+                  onPress={() => { setScanResult(null); setScanText(''); setScanImage(null); setScanBase64(null); }}
                   activeOpacity={0.7}
                 >
                   <Text style={s.scanAgainText}>{locale === 'en' ? '↻ Scan another document' : '↻ Escanear otro documento'}</Text>

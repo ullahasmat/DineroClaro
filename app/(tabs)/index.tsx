@@ -83,6 +83,7 @@ const T = {
     add: 'Add',
     trendingLabel: 'TRENDING FOR LONG-TERM',
     trendingSub: 'Popular picks among long-term investors',
+    creditPrompt: 'Your credit score (300-850):',
     insightTitle: "Lana's Insights",
     insightLoading: 'Generating insights...',
     dailyTipLabel: 'DAILY TIP',
@@ -114,6 +115,7 @@ const T = {
     add: 'Agregar',
     trendingLabel: 'TENDENCIAS A LARGO PLAZO',
     trendingSub: 'Opciones populares entre inversionistas a largo plazo',
+    creditPrompt: 'Tu puntaje de crédito (300-850):',
     insightTitle: 'Consejos de Lana',
     insightLoading: 'Generando consejos...',
     dailyTipLabel: 'TIP DEL DÍA',
@@ -211,9 +213,14 @@ export default function FinancesScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const [income, setIncome] = useState(() => parseFloat(financialProfile.income) || 2400);
-  const [checking, setChecking] = useState(() => parseFloat(financialProfile.checking) || 1240);
-  const [creditScore] = useState(() => parseFloat(financialProfile.creditScore) || 642);
+  const [income, setIncomeLocal] = useState(() => parseFloat(financialProfile.income) || 2400);
+  const [checking, setCheckingLocal] = useState(() => parseFloat(financialProfile.checking) || 1240);
+  const [creditScore, setCreditScoreLocal] = useState(() => parseFloat(financialProfile.creditScore) || 642);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  function setIncome(v: number) { setIncomeLocal(v); setDataVersion(n => n + 1); }
+  function setChecking(v: number) { setCheckingLocal(v); setDataVersion(n => n + 1); }
+  function setCreditScore(v: number) { setCreditScoreLocal(v); setDataVersion(n => n + 1); }
   const [cards, setCards] = useState<Card[]>(() =>
     financialProfile.cards.length > 0
       ? financialProfile.cards.map(c => ({ name: c.name, balance: parseFloat(c.balance) || 0, limit: parseFloat(c.limit) || 0 }))
@@ -232,11 +239,52 @@ export default function FinancesScreen() {
   }
 
   const dayIndex = Math.floor(Date.now() / 86400000) % DAILY_TIPS.en.length;
-  const streak = Math.floor(Date.now() / 86400000) % 30 + 1; // simulated streak
 
-  const scoreGoal = 720;
+  // Streak: count days since first use, stored as epoch day in context area field hack
+  const [streak, setStreak] = useState(() => {
+    try {
+      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dc_streak') : null;
+      if (!stored) return 0;
+      const { start, last } = JSON.parse(stored);
+      const today = Math.floor(Date.now() / 86400000);
+      if (today - last > 1) return 0; // streak broken
+      return today - start;
+    } catch { return 0; }
+  });
+
+  useEffect(() => {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const today = Math.floor(Date.now() / 86400000);
+      const stored = localStorage.getItem('dc_streak');
+      if (!stored) {
+        localStorage.setItem('dc_streak', JSON.stringify({ start: today, last: today }));
+        setStreak(0);
+      } else {
+        const { start, last } = JSON.parse(stored);
+        if (today - last > 1) {
+          localStorage.setItem('dc_streak', JSON.stringify({ start: today, last: today }));
+          setStreak(0);
+        } else if (today !== last) {
+          localStorage.setItem('dc_streak', JSON.stringify({ start, last: today }));
+          setStreak(today - start);
+        }
+      }
+    } catch { /* non-web fallback */ }
+  }, []);
+
+  const scoreGoal = 850;
   const scoreMin = 300;
   const scorePct = ((creditScore - scoreMin) / (scoreGoal - scoreMin)) * 100;
+
+  function getScoreRating() {
+    if (creditScore >= 750) return { label: locale === 'en' ? 'Excellent' : 'Excelente', emoji: '🌟', color: C.green };
+    if (creditScore >= 700) return { label: locale === 'en' ? 'Good' : 'Bueno', emoji: '✅', color: C.green };
+    if (creditScore >= 650) return { label: locale === 'en' ? 'Fair' : 'Regular', emoji: '⭐', color: C.gold };
+    if (creditScore >= 550) return { label: locale === 'en' ? 'Poor' : 'Bajo', emoji: '⚠️', color: C.red };
+    return { label: locale === 'en' ? 'Very Poor' : 'Muy bajo', emoji: '🚨', color: C.red };
+  }
+  const rating = getScoreRating();
 
   /* ── Fetch Claude insights ── */
   useEffect(() => {
@@ -244,11 +292,20 @@ export default function FinancesScreen() {
     (async () => {
       setInsightLoading(true);
       setInsight(null);
+      const hasCards = cards.length > 0 && cards[0].name !== 'Discover Secured';
+      const cardInfo = hasCards
+        ? (locale === 'es'
+          ? `Tarjetas: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}`
+          : `Cards: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}`)
+        : (locale === 'es'
+          ? 'El usuario NO tiene tarjetas de crédito. Sugiere tarjetas de crédito específicas para principiantes según su edad y área (secured cards como Discover it Secured, Capital One Platinum Secured, o Chime Credit Builder). Explica por qué cada una es buena para ellos.'
+          : 'The user has NO credit cards. Suggest specific beginner-friendly credit cards based on their age and area (secured cards like Discover it Secured, Capital One Platinum Secured, or Chime Credit Builder). Explain why each is good for them.');
+
       const prompt = locale === 'es'
-        ? `Eres Lana, asesora financiera de DineroClaro. Da 3-4 puntos breves de consejos financieros personalizados en español basados en estos datos: Nombre: ${userProfile.name || 'Usuario'}, Edad: ${userProfile.age || 'N/A'}, Etapa: ${lifeStage}, Puntaje de crédito: ${creditScore}, Ingreso: $${income}, Cuenta: $${checking}, Tarjetas: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}. Responde SOLO con los puntos, sin saludo ni cierre.`
-        : `You are Lana, DineroClaro's financial advisor. Give 3-4 brief personalized financial advice bullet points in English based on this data: Name: ${userProfile.name || 'User'}, Age: ${userProfile.age || 'N/A'}, Stage: ${lifeStage}, Credit score: ${creditScore}, Income: $${income}, Checking: $${checking}, Cards: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}. Respond ONLY with the bullet points, no greeting or sign-off.`;
+        ? `Eres Lana, asesora financiera de DineroClaro. Da 3-4 puntos breves de consejos financieros personalizados en español basados en estos datos: Nombre: ${userProfile.name || 'Usuario'}, Edad: ${userProfile.age || 'N/A'}, Área: ${userProfile.area || 'N/A'}, Etapa: ${lifeStage}, Puntaje de crédito: ${creditScore}, Ingreso: $${income}, Cuenta: $${checking}. ${cardInfo}. Responde SOLO con los puntos, sin saludo ni cierre.`
+        : `You are Lana, DineroClaro's financial advisor. Give 3-4 brief personalized financial advice bullet points in English based on this data: Name: ${userProfile.name || 'User'}, Age: ${userProfile.age || 'N/A'}, Area: ${userProfile.area || 'N/A'}, Stage: ${lifeStage}, Credit score: ${creditScore}, Income: $${income}, Checking: $${checking}. ${cardInfo}. Respond ONLY with the bullet points, no greeting or sign-off.`;
       try {
-        const res = await fetch(`${API_BASE}/chat`, {
+        const res = await fetch(`${API_BASE}/chat/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: prompt }),
@@ -262,19 +319,19 @@ export default function FinancesScreen() {
       }
     })();
     return () => { cancelled = true; };
-  }, [locale]);
+  }, [locale, dataVersion]);
 
   /* ── Parallax header interpolations ── */
   const headerScale = scrollY.interpolate({ inputRange: [-80, 0], outputRange: [1.05, 1], extrapolate: 'clamp' });
   const headerOpacity = scrollY.interpolate({ inputRange: [0, 300], outputRange: [1, 0.85], extrapolate: 'clamp' });
   const heroTranslate = scrollY.interpolate({ inputRange: [0, 200], outputRange: [0, -20], extrapolate: 'clamp' });
 
-  function syncFinancials(updatedCards?: Card[]) {
-    const c = updatedCards ?? cards;
+  function syncFinancials(opts?: { updatedCards?: Card[]; score?: number; inc?: number; chk?: number }) {
+    const c = opts?.updatedCards ?? cards;
     setFinancialProfile({
-      creditScore: String(creditScore),
-      income: String(income),
-      checking: String(checking),
+      creditScore: String(opts?.score ?? creditScore),
+      income: String(opts?.inc ?? income),
+      checking: String(opts?.chk ?? checking),
       cards: c.map(card => ({ name: card.name, balance: String(card.balance), limit: String(card.limit) })),
     });
   }
@@ -286,7 +343,7 @@ export default function FinancesScreen() {
     setCards(updated);
     setNewCard({ name: '', balance: '', limit: '' });
     setModalVisible(false);
-    syncFinancials(updated);
+    syncFinancials({ updatedCards: updated });
   }
 
   let ci = 0;
@@ -357,32 +414,38 @@ export default function FinancesScreen() {
         {/* ── Credit Score ── */}
         <FadeSlide index={ci++} scrollY={scrollY}>
           <GlassLabel text={t.creditScore} />
-          <View style={[s.card, s.cardGold]}>
+          <TouchableOpacity style={[s.card, s.cardGold]} onPress={() => {
+            const v = prompt(t.creditPrompt, String(creditScore));
+            if (v) { const n = Math.max(300, Math.min(850, parseInt(v) || creditScore)); setCreditScore(n); syncFinancials({ score: n }); }
+          }} activeOpacity={0.75}>
             <View style={s.cardRow}>
               <Text style={s.cardLabel}>{t.creditScore}</Text>
-              <Text style={s.badge}>{'\u2B50'} Fair</Text>
+              <View style={[s.badge, { backgroundColor: rating.color + '18' }]}>
+                <Text style={[s.badgeText, { color: rating.color }]}>{rating.emoji} {rating.label}</Text>
+              </View>
             </View>
-            <Text style={s.scoreValue}>{creditScore}</Text>
+            <Text style={[s.scoreValue, { color: rating.color }]}>{creditScore}</Text>
             <View style={s.trackWrap}>
-              <View style={[s.trackFill, { width: `${Math.min(scorePct, 100)}%` }]} />
+              <View style={[s.trackFill, { width: `${Math.min(scorePct, 100)}%`, backgroundColor: rating.color }]} />
             </View>
             <View style={s.scoreRow}>
               <Text style={s.scoreEdge}>{scoreMin}</Text>
+              <Text style={s.tapHint}>{t.tapEdit}</Text>
               <Text style={s.scoreGoal}>{t.goal}: {scoreGoal}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         </FadeSlide>
 
         {/* ── Income + Checking ── */}
         <FadeSlide index={ci++} scrollY={scrollY}>
           <View style={s.grid2}>
-            <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.incomePrompt, String(income)); if (v) setIncome(parseFloat(v) || income); }} activeOpacity={0.75}>
+            <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.incomePrompt, String(income)); if (v) { const n = parseFloat(v) || income; setIncome(n); syncFinancials({ inc: n }); } }} activeOpacity={0.75}>
               <Text style={s.cardLabel}>{t.income}</Text>
               <Text style={s.cardEmoji}>{'\uD83D\uDCB5'}</Text>
               <Text style={s.bigNum}>${income.toLocaleString()}</Text>
               <Text style={s.tapHint}>{t.tapEdit}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.checkingPrompt, String(checking)); if (v) setChecking(parseFloat(v) || checking); }} activeOpacity={0.75}>
+            <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.checkingPrompt, String(checking)); if (v) { const n = parseFloat(v) || checking; setChecking(n); syncFinancials({ chk: n }); } }} activeOpacity={0.75}>
               <Text style={s.cardLabel}>{t.checking}</Text>
               <Text style={s.cardEmoji}>{'\uD83C\uDFE6'}</Text>
               <Text style={s.bigNum}>${checking.toLocaleString()}</Text>
@@ -589,7 +652,8 @@ const s = StyleSheet.create({
   cardGold: { borderTopWidth: 3, borderTopColor: C.gold, borderRadius: 24 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardLabel: { fontSize: 11, color: C.text3, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: '700', ...FF },
-  badge: { fontSize: 11, color: C.gold, fontWeight: '700', backgroundColor: C.tintG, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, ...FF },
+  badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
+  badgeText: { fontSize: 11, fontWeight: '700', ...FF },
   scoreValue: { fontSize: 56, fontWeight: '200', color: C.gold, letterSpacing: -1, ...FF },
   trackWrap: { width: '100%', height: 6, backgroundColor: C.tintN, borderRadius: 4, overflow: 'hidden' },
   trackFill: { height: '100%', backgroundColor: C.gold, borderRadius: 4 },
