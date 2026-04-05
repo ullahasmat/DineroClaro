@@ -63,34 +63,41 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <Text style={s.heading}>Welcome 👋</Text>
       <Text style={s.sub}>Financial clarity for the Hispanic community.</Text>
 
-      {/* Feature pills — horizontal row */}
-      <View style={s.featureRow}>
-        {FEATURES.map(f => (
-          <View key={f.label} style={s.featurePill}>
-            <Text style={{ fontSize: 18 }}>{f.emoji}</Text>
-            <Text style={s.featureLabel}>{f.label}</Text>
-          </View>
-        ))}
+      {/* What's inside — muted display-only grid */}
+      <View style={s.featureCard}>
+        <Text style={s.featureCardLabel}>WHAT'S INSIDE</Text>
+        <View style={s.featureGrid}>
+          {FEATURES.map(f => (
+            <View key={f.label} style={s.featureItem}>
+              <View style={s.featureCircle}>
+                <Text style={{ fontSize: 16 }}>{f.emoji}</Text>
+              </View>
+              <Text style={s.featureItemLabel}>{f.label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
-      {/* Life stage — compact */}
-      <Text style={s.stageHeading}>Your life stage</Text>
-      <View style={s.stageRow}>
-        {STAGES.map(st => {
-          const active = lifeStage === st.key;
-          const color = STAGE_COLORS[st.key];
-          return (
-            <TouchableOpacity
-              key={st.key}
-              style={[s.stageChip, active && { backgroundColor: color, borderColor: color }]}
-              onPress={() => setLifeStage(st.key)}
-              activeOpacity={0.8}
-            >
-              <Text style={{ fontSize: 16 }}>{st.emoji}</Text>
-              <Text style={[s.stageLabel, active && { color: '#fff' }]}>{st.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
+      {/* Life stage — interactive selector */}
+      <View style={s.stageCard}>
+        <Text style={s.stageCardLabel}>SELECT YOUR STAGE</Text>
+        <View style={s.stageRow}>
+          {STAGES.map(st => {
+            const active = lifeStage === st.key;
+            const color = STAGE_COLORS[st.key];
+            return (
+              <TouchableOpacity
+                key={st.key}
+                style={[s.stageChip, active && { backgroundColor: color, borderColor: color }]}
+                onPress={() => setLifeStage(st.key)}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 22 }}>{st.emoji}</Text>
+                <Text style={[s.stageLabel, active && { color: '#fff' }]}>{st.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* CTA */}
@@ -220,7 +227,20 @@ const s = StyleSheet.create({
   heading: { fontSize: 28, fontWeight: '200', color: C.text, letterSpacing: -0.5, marginBottom: 4, ...FF },
   sub: { fontSize: 14, color: C.text2, lineHeight: 20, marginBottom: 8 },
 
-  /* Feature pills — horizontal */
+  /* Feature card — muted display */
+  featureCard: {
+    backgroundColor: 'rgba(22,47,90,0.04)', borderRadius: 20, padding: 14, gap: 10,
+  },
+  featureCardLabel: { fontSize: 10, fontWeight: '700', color: C.text3, letterSpacing: 1.5, ...FF },
+  featureGrid: { flexDirection: 'row', justifyContent: 'space-around' },
+  featureItem: { alignItems: 'center', gap: 4 },
+  featureCircle: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center',
+  },
+  featureItemLabel: { fontSize: 10, fontWeight: '600', color: C.text3, ...FF },
+
+  /* Feature row — for done step */
   featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginVertical: 8 },
   featurePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -229,15 +249,19 @@ const s = StyleSheet.create({
   },
   featureLabel: { fontSize: 12, fontWeight: '600', color: C.text2, ...FF },
 
-  /* Life stage — compact chips */
-  stageHeading: { fontSize: 14, fontWeight: '700', color: C.text, marginBottom: 8, ...FF },
-  stageRow: { flexDirection: 'row', gap: 8 },
+  /* Life stage — interactive selector */
+  stageCard: {
+    backgroundColor: C.card, borderRadius: 20, padding: 16, gap: 12,
+    borderWidth: 1.5, borderColor: C.gold + '44',
+  },
+  stageCardLabel: { fontSize: 10, fontWeight: '800', color: C.gold, letterSpacing: 1.5, textAlign: 'center', ...FF },
+  stageRow: { flexDirection: 'row', gap: 10 },
   stageChip: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: C.card, borderRadius: 50, paddingVertical: 12,
+    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: C.bg, borderRadius: 16, paddingVertical: 14,
     borderWidth: 1.5, borderColor: C.border,
   },
-  stageLabel: { fontSize: 12, fontWeight: '700', color: C.text, ...FF },
+  stageLabel: { fontSize: 11, fontWeight: '700', color: C.text, textAlign: 'center', ...FF },
 
   /* CTA */
   ctaWrap: { gap: 8, marginTop: 8 },
