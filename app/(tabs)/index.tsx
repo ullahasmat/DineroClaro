@@ -213,10 +213,20 @@ export default function FinancesScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const [income, setIncomeLocal] = useState(() => parseFloat(financialProfile.income) || 2400);
-  const [checking, setCheckingLocal] = useState(() => parseFloat(financialProfile.checking) || 1240);
-  const [creditScore, setCreditScoreLocal] = useState(() => parseFloat(financialProfile.creditScore) || 642);
+  const [income, setIncomeLocal] = useState(() => parseFloat(financialProfile.income) || 0);
+  const [checking, setCheckingLocal] = useState(() => parseFloat(financialProfile.checking) || 0);
+  const [creditScore, setCreditScoreLocal] = useState(() => parseFloat(financialProfile.creditScore) || 0);
   const [dataVersion, setDataVersion] = useState(0);
+
+  // Sync from context when financialProfile changes (e.g. after onboarding)
+  useEffect(() => {
+    const s = parseFloat(financialProfile.creditScore);
+    const i = parseFloat(financialProfile.income);
+    const c = parseFloat(financialProfile.checking);
+    if (s && s !== creditScore) setCreditScoreLocal(s);
+    if (i && i !== income) setIncomeLocal(i);
+    if (c && c !== checking) setCheckingLocal(c);
+  }, [financialProfile.creditScore, financialProfile.income, financialProfile.checking]);
 
   function setIncome(v: number) { setIncomeLocal(v); setDataVersion(n => n + 1); }
   function setChecking(v: number) { setCheckingLocal(v); setDataVersion(n => n + 1); }
@@ -288,37 +298,36 @@ export default function FinancesScreen() {
 
   /* ── Fetch Claude insights ── */
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     (async () => {
       setInsightLoading(true);
       setInsight(null);
       const hasCards = cards.length > 0 && cards[0].name !== 'Discover Secured';
-      const cardInfo = hasCards
-        ? (locale === 'es'
-          ? `Tarjetas: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}`
-          : `Cards: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}`)
-        : (locale === 'es'
-          ? 'El usuario NO tiene tarjetas de crédito. Sugiere tarjetas de crédito específicas para principiantes según su edad y área (secured cards como Discover it Secured, Capital One Platinum Secured, o Chime Credit Builder). Explica por qué cada una es buena para ellos.'
-          : 'The user has NO credit cards. Suggest specific beginner-friendly credit cards based on their age and area (secured cards like Discover it Secured, Capital One Platinum Secured, or Chime Credit Builder). Explain why each is good for them.');
+      const cardNote = hasCards
+        ? `Cards: ${cards.map(c => `${c.name} $${c.balance}/$${c.limit}`).join(', ')}`
+        : 'No credit cards — suggest beginner secured cards (Discover it Secured, Capital One Platinum Secured).';
 
       const prompt = locale === 'es'
-        ? `Eres Lana, asesora financiera de DineroClaro. Da 3-4 puntos breves de consejos financieros personalizados en español basados en estos datos: Nombre: ${userProfile.name || 'Usuario'}, Edad: ${userProfile.age || 'N/A'}, Área: ${userProfile.area || 'N/A'}, Etapa: ${lifeStage}, Puntaje de crédito: ${creditScore}, Ingreso: $${income}, Cuenta: $${checking}. ${cardInfo}. Responde SOLO con los puntos, sin saludo ni cierre.`
-        : `You are Lana, DineroClaro's financial advisor. Give 3-4 brief personalized financial advice bullet points in English based on this data: Name: ${userProfile.name || 'User'}, Age: ${userProfile.age || 'N/A'}, Area: ${userProfile.area || 'N/A'}, Stage: ${lifeStage}, Credit score: ${creditScore}, Income: $${income}, Checking: $${checking}. ${cardInfo}. Respond ONLY with the bullet points, no greeting or sign-off.`;
+        ? `Da 3 puntos breves de consejos financieros en español. Datos: crédito ${creditScore || 'N/A'}, ingreso $${income || 'N/A'}, cuenta $${checking || 'N/A'}. ${cardNote}. Solo puntos, sin saludo.`
+        : `Give 3 brief financial tips. Data: credit ${creditScore || 'N/A'}, income $${income || 'N/A'}, checking $${checking || 'N/A'}. ${cardNote}. Only bullet points, no greeting.`;
       try {
+        const timer = setTimeout(() => controller.abort(), 15000);
         const res = await fetch(`${API_BASE}/chat/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: prompt }),
+          body: JSON.stringify({ message: prompt, locale }),
+          signal: controller.signal,
         });
+        clearTimeout(timer);
         const data = await res.json();
-        if (!cancelled) setInsight(data.reply ?? data.response ?? JSON.stringify(data));
+        if (!controller.signal.aborted) setInsight(data.reply ?? data.response ?? '');
       } catch {
-        if (!cancelled) setInsight(locale === 'es' ? 'No se pudo conectar al servidor.' : 'Could not connect to the server.');
+        if (!controller.signal.aborted) setInsight(locale === 'es' ? 'No se pudo conectar.' : 'Could not connect.');
       } finally {
-        if (!cancelled) setInsightLoading(false);
+        if (!controller.signal.aborted) setInsightLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [locale, dataVersion]);
 
   /* ── Parallax header interpolations ── */
