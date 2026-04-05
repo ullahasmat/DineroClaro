@@ -1,4 +1,6 @@
 {
+  "python.terminal.useEnvFile": true,
+  "python.envFile": "${workspaceFolder}/.env",
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",

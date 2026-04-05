@@ -36,10 +36,16 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
+
+# python cache
+__pycache__/
+*.pyc
 
 app-example
 

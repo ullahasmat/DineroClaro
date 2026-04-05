@@ -4,9 +4,28 @@ import {
   FlatList, StyleSheet,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { useLocale } from '@/context/AppContext';
 
-const API_BASE = 'http://localhost:8000';
+const runtime = Constants as unknown as {
+  expoConfig?: { hostUri?: string };
+  expoGoConfig?: { debuggerHost?: string };
+  manifest?: { debuggerHost?: string };
+  manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
+};
+const hostUri =
+  runtime.expoGoConfig?.debuggerHost ??
+  runtime.manifest?.debuggerHost ??
+  runtime.expoConfig?.hostUri ??
+  runtime.manifest2?.extra?.expoClient?.hostUri;
+const host = hostUri?.split(':')[0];
+const fallbackApiBase = Platform.select({
+  ios: 'http://127.0.0.1:8000',
+  android: 'http://10.0.2.2:8000',
+  default: 'http://localhost:8000',
+});
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_BASE?.trim() || (host ? `http://${host}:8000` : fallbackApiBase);
 const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 
 const T = {
@@ -93,9 +112,18 @@ export default function ChatScreen() {
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = await res.json();
-      setMessages([...updated, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.reply }]);
-    } catch {
-      setMessages([...updated, { id: (Date.now() + 1).toString(), role: 'assistant', content: t.errorMsg }]);
+      const reply = data.reply ?? data.response ?? t.errorMsg;
+      setMessages([...updated, { id: (Date.now() + 1).toString(), role: 'assistant', content: reply }]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t.errorMsg;
+      setMessages([
+        ...updated,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `${t.errorMsg} (${message}) @ ${API_BASE}`,
+        },
+      ]);
     } finally {
       setLoading(false);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);

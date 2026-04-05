@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from ..services.chat_service import chat
+from app.services.chat_service import chat
 
 router = APIRouter()
 
@@ -11,10 +11,13 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    response: str
+    reply: str
 
 
 @router.post("/", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest) -> ChatResponse:
-    ai_text = chat(req.message)
-    return ChatResponse(response=ai_text)
+async def chat_endpoint(request: ChatRequest) -> ChatResponse:
+    try:
+        result = chat(request.message)
+        return {"reply": result}
+    except Exception as exc:
+        return {"reply": f"I cannot reach the AI service right now. Please try again. ({exc})"}
