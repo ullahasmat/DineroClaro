@@ -1,211 +1,427 @@
+import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Linking, Platform,
+  StyleSheet, Platform, Modal, TextInput,
 } from 'react-native';
-import { useLocale } from '@/context/AppContext';
+import { useRouter } from 'expo-router';
+import { useLocale, LifeStage } from '@/context/AppContext';
+
+const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
+const FF = FONT ? { fontFamily: FONT } : {};
+
+const STAGE_COLORS: Record<LifeStage, string> = {
+  'new-arrival':  '#00E5A8',
+  'first-gen':    '#FF3B8B',
+  'established':  '#7B3FFF',
+};
+const STAGE_BG: Record<LifeStage, string> = {
+  'new-arrival':  '#062018',
+  'first-gen':    '#1A0A14',
+  'established':  '#120A28',
+};
+const STAGE_STICKER: Record<LifeStage, string> = {
+  'new-arrival':  '✈️',
+  'first-gen':    '🌟',
+  'established':  '👑',
+};
 
 const T = {
   en: {
-    eyebrow: '◆ CURATED FOR YOU ◆',
-    title: 'Recommended',
-    goalPre: 'YOUR GOAL  ▶',
-    goalValue: 'build credit',
-    tipTitle: 'How we pick these',
-    tipBody: 'Recommendations update as your credit score and finances improve. Keep your data fresh for the best suggestions.',
+    eyebrow: '◆ YOUR PROFILE ◆',
+    title: 'Profile',
+    hello: 'Hello',
+    guest: 'Guest',
+    lifeStageLabel: 'LIFE STAGE',
+    stages: {
+      'new-arrival': 'New Arrival',
+      'first-gen':   'First Gen',
+      'established': 'Established',
+    } as Record<LifeStage, string>,
+    stageDesc: {
+      'new-arrival': "Just arrived — let's build your financial foundation.",
+      'first-gen':   'First generation navigating the U.S. financial system.',
+      'established': "Building wealth and protecting what you've earned.",
+    } as Record<LifeStage, string>,
+    accountLabel: 'ACCOUNT',
+    personalInfo: 'Personal Information',
+    name: 'Name',
+    age: 'Age',
+    area: 'Area / City',
+    changePassword: 'Change Password',
+    currentPassword: 'Current password',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm new password',
+    save: 'Save',
+    cancel: 'Cancel',
+    logOut: 'Log Out',
+    logIn: 'Log In',
+    email: 'Email',
+    password: 'Password',
+    loggedInAs: 'Logged in as',
+    notLoggedIn: 'Not logged in',
+    passwordUpdated: 'Password updated ✓',
     stampLine1: 'LANA AI',
     stampLine2: '★ APPROVED ★',
-    recs: [
-      {
-        id: '1', emoji: '💳', accentColor: '#FF6B6B',
-        title: 'Discover it Secured',
-        description: 'No annual fee · 2% cashback · reports to all 3 bureaus',
-        tags: [
-          { label: 'No credit needed', color: '#1a3a2a', textColor: '#1db896' },
-          { label: '$200 min deposit', color: '#1a3333', textColor: '#8ab8b8' },
-        ],
-      },
-      {
-        id: '2', emoji: '🏦', accentColor: '#FFE566',
-        title: 'Chase Total Checking',
-        description: '$0 fee with direct deposit · large ATM network · easy app',
-        tags: [
-          { label: 'Beginner-friendly', color: '#1a2a00', textColor: '#FFE566' },
-        ],
-      },
-      {
-        id: '3', emoji: '📈', accentColor: '#7C5CBF',
-        title: 'Fidelity — start investing',
-        description: '$0 min · fractional shares · no account fees',
-        tags: [
-          { label: 'After credit is built', color: '#2a1a3a', textColor: '#7C5CBF' },
-        ],
-      },
-    ],
   },
   es: {
-    eyebrow: '◆ SELECCIONADO PARA TI ◆',
-    title: 'Recomendados',
-    goalPre: 'TU META  ▶',
-    goalValue: 'construir crédito',
-    tipTitle: 'Cómo elegimos estas opciones',
-    tipBody: 'Las recomendaciones se actualizan a medida que mejora tu puntaje de crédito. Mantén tus datos al día para obtener las mejores sugerencias.',
+    eyebrow: '◆ TU PERFIL ◆',
+    title: 'Perfil',
+    hello: 'Hola',
+    guest: 'Invitado',
+    lifeStageLabel: 'ETAPA DE VIDA',
+    stages: {
+      'new-arrival': 'Recién llegado',
+      'first-gen':   'Primera Gen',
+      'established': 'Establecido',
+    } as Record<LifeStage, string>,
+    stageDesc: {
+      'new-arrival': 'Recién llegado — construyamos tu base financiera.',
+      'first-gen':   'Primera generación navegando el sistema financiero de EE.UU.',
+      'established': 'Construyendo riqueza y protegiendo lo que has ganado.',
+    } as Record<LifeStage, string>,
+    accountLabel: 'CUENTA',
+    personalInfo: 'Información personal',
+    name: 'Nombre',
+    age: 'Edad',
+    area: 'Área / Ciudad',
+    changePassword: 'Cambiar contraseña',
+    currentPassword: 'Contraseña actual',
+    newPassword: 'Nueva contraseña',
+    confirmPassword: 'Confirmar nueva contraseña',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    logOut: 'Cerrar sesión',
+    logIn: 'Iniciar sesión',
+    email: 'Correo electrónico',
+    password: 'Contraseña',
+    loggedInAs: 'Sesión iniciada como',
+    notLoggedIn: 'Sin sesión activa',
+    passwordUpdated: 'Contraseña actualizada ✓',
     stampLine1: 'LANA IA',
     stampLine2: '★ APROBADO ★',
-    recs: [
-      {
-        id: '1', emoji: '💳', accentColor: '#FF6B6B',
-        title: 'Discover it Secured',
-        description: 'Sin cuota anual · 2% cashback · reporta a las 3 agencias',
-        tags: [
-          { label: 'Sin crédito requerido', color: '#1a3a2a', textColor: '#1db896' },
-          { label: 'Depósito mín. $200', color: '#1a3333', textColor: '#8ab8b8' },
-        ],
-      },
-      {
-        id: '2', emoji: '🏦', accentColor: '#FFE566',
-        title: 'Chase Total Checking',
-        description: '$0 con depósito directo · amplia red de ATMs · app sencilla',
-        tags: [
-          { label: 'Amigable para principiantes', color: '#1a2a00', textColor: '#FFE566' },
-        ],
-      },
-      {
-        id: '3', emoji: '📈', accentColor: '#7C5CBF',
-        title: 'Fidelity — empieza a invertir',
-        description: '$0 mínimo · acciones fraccionadas · sin comisiones',
-        tags: [
-          { label: 'Después de construir crédito', color: '#2a1a3a', textColor: '#7C5CBF' },
-        ],
-      },
-    ],
   },
 };
 
-function ZigZag({ color }: { color: string }) {
+function LangToggle() {
+  const { locale, setLocale } = useLocale();
   return (
-    <View style={z.row}>
-      {Array.from({ length: 16 }).map((_, i) => (
-        <View
-          key={i}
-          style={[z.triangle, {
-            borderBottomColor: color, borderBottomWidth: i % 2 === 0 ? 8 : 0,
-            borderTopColor: color, borderTopWidth: i % 2 !== 0 ? 8 : 0,
-            borderLeftWidth: 6, borderRightWidth: 6,
-            borderLeftColor: 'transparent', borderRightColor: 'transparent',
-          }]}
-        />
-      ))}
+    <View style={lt.wrap}>
+      <TouchableOpacity
+        style={[lt.btn, locale === 'en' && lt.active]}
+        onPress={() => setLocale('en')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}
+      >
+        <Text style={[lt.text, locale === 'en' && lt.activeText]}>EN</Text>
+      </TouchableOpacity>
+      <View style={lt.divider} />
+      <TouchableOpacity
+        style={[lt.btn, locale === 'es' && lt.active]}
+        onPress={() => setLocale('es')}
+        hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
+      >
+        <Text style={[lt.text, locale === 'es' && lt.activeText]}>ES</Text>
+      </TouchableOpacity>
     </View>
+  );
+}
+
+function SectionRow({ label }: { label: string }) {
+  return (
+    <View style={sec.row}>
+      <Text style={sec.label}>{label}</Text>
+      <View style={sec.line} />
+    </View>
+  );
+}
+
+function SettingRow({
+  icon, label, value, accent, onPress,
+}: {
+  icon: string; label: string; value?: string; accent?: string; onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={sr.row} onPress={onPress} activeOpacity={0.75}>
+      <View style={[sr.iconBox, { backgroundColor: (accent ?? '#7B3FFF') + '1A' }]}>
+        <Text style={sr.icon}>{icon}</Text>
+      </View>
+      <View style={sr.textBlock}>
+        <Text style={sr.label}>{label}</Text>
+        {value ? <Text style={sr.value}>{value}</Text> : null}
+      </View>
+      <Text style={[sr.chevron, { color: accent ?? '#44446A' }]}>›</Text>
+    </TouchableOpacity>
   );
 }
 
 export default function ProfileScreen() {
-  const { locale } = useLocale();
+  const router = useRouter();
+  const { locale, lifeStage } = useLocale();
   const t = T[locale];
+
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState({ name: '', age: '', area: '', email: '' });
+
+  const [showPersonalInfo, setShowPersonalInfo] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
+  const [editUser, setEditUser] = useState({ name: '', age: '', area: '' });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwSaved, setPwSaved] = useState(false);
+
+  const stageColor = STAGE_COLORS[lifeStage];
+  const stageBg   = STAGE_BG[lifeStage];
+
+  function openPersonalInfo() {
+    setEditUser({ name: user.name, age: user.age, area: user.area });
+    setShowPersonalInfo(true);
+  }
+
+  function savePersonalInfo() {
+    setUser((u) => ({ ...u, ...editUser }));
+    setShowPersonalInfo(false);
+  }
+
+  function doLogin() {
+    if (!loginForm.email.trim()) return;
+    setUser((u) => ({ ...u, email: loginForm.email }));
+    setIsLoggedIn(true);
+    setLoginForm({ email: '', password: '' });
+    setShowLogin(false);
+  }
+
+  function savePassword() {
+    setPwSaved(true);
+    setTimeout(() => { setPwSaved(false); setShowChangePassword(false); }, 1200);
+    setPwForm({ current: '', next: '', confirm: '' });
+  }
+
+  const displayName = user.name || (isLoggedIn ? user.email.split('@')[0] : t.guest);
 
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={s.retroHeader}>
-          <View style={s.retroIconBox}>
-            <Text style={s.retroIcon}>⭐</Text>
+
+        {/* ── Header ── */}
+        <View style={s.header}>
+          <View style={[s.avatarBox, { borderColor: stageColor + '66', backgroundColor: stageBg }]}>
+            <Text style={[s.avatarText, { color: stageColor }]}>{displayName[0]?.toUpperCase() ?? '?'}</Text>
           </View>
-          <View>
-            <Text style={s.retroEyebrow}>{t.eyebrow}</Text>
-            <Text style={s.pageTitle}>{t.title}</Text>
+          <View style={s.headerText}>
+            <Text style={[s.eyebrow, { color: stageColor }]}>{t.eyebrow}</Text>
+            <Text style={s.pageTitle}>{t.hello}, {displayName}</Text>
           </View>
+          <LangToggle />
         </View>
 
-        <View style={s.goalBanner}>
-          <ZigZag color="#1db896" />
-          <View style={s.goalInner}>
-            <Text style={s.goalPre}>{t.goalPre}</Text>
-            <Text style={s.goalValue}>{t.goalValue}</Text>
-          </View>
-          <ZigZag color="#1db896" />
-        </View>
+        {/* ── Life Stage ── */}
+        <SectionRow label={t.lifeStageLabel} />
 
-        {t.recs.map((rec) => (
-          <TouchableOpacity
-            key={rec.id}
-            style={[s.recCard, { borderLeftColor: rec.accentColor }]}
-            onPress={() => Linking.openURL('https://www.google.com/search?q=' + encodeURIComponent(rec.title))}
-            activeOpacity={0.75}
-          >
-            <View style={s.recTopRow}>
-              <View style={[s.recIconBox, { backgroundColor: rec.accentColor + '22' }]}>
-                <Text style={s.recEmoji}>{rec.emoji}</Text>
-              </View>
-              <View style={s.recTextBlock}>
-                <Text style={s.recTitle}>{rec.title}</Text>
-                <Text style={s.recDesc}>{rec.description}</Text>
-              </View>
-              <Text style={[s.recArrow, { color: rec.accentColor }]}>›</Text>
+        <View style={[s.stageCard, { backgroundColor: stageBg, borderColor: stageColor + '55' }]}>
+          <View style={s.stageBubbleRow}>
+            <View style={[s.stageStickerBox, { backgroundColor: stageColor + '22', borderColor: stageColor + '55' }]}>
+              <Text style={s.stageSticker}>{STAGE_STICKER[lifeStage]}</Text>
             </View>
-            <View style={s.tagRow}>
-              {rec.tags.map((tag) => (
-                <View key={tag.label} style={[s.tag, { backgroundColor: tag.color, borderColor: (tag.textColor ?? '#8ab8b8') + '55' }]}>
-                  <Text style={[s.tagText, { color: tag.textColor ?? '#8ab8b8' }]}>{tag.label}</Text>
-                </View>
-              ))}
+            <View style={[s.stageBubble, { backgroundColor: stageColor }]}>
+              <Text style={s.stageBubbleText}>{t.stages[lifeStage]}</Text>
             </View>
-          </TouchableOpacity>
-        ))}
-
-        <View style={s.tip}>
-          <Text style={s.tipIcon}>🔮</Text>
-          <View style={s.tipText}>
-            <Text style={s.tipTitle}>{t.tipTitle}</Text>
-            <Text style={s.tipBody}>{t.tipBody}</Text>
           </View>
+          <Text style={[s.stageDesc, { color: stageColor }]}>{t.stageDesc[lifeStage]}</Text>
+          <Text style={s.stageLocked}>Change in Update Preferences ›</Text>
         </View>
 
+        {/* ── Account ── */}
+        <SectionRow label={t.accountLabel} />
+
+        <View style={s.settingsBlock}>
+          <SettingRow
+            icon="🛠️"
+            label={locale === 'en' ? 'Update Preferences' : 'Actualizar preferencias'}
+            value={locale === 'en' ? 'Reopen welcome & life stage' : 'Reabrir bienvenida y etapa'}
+            accent="#00E5A8"
+            onPress={() => router.push('/onboarding')}
+          />
+          <View style={s.settingDivider} />
+          <SettingRow
+            icon="👤"
+            label={t.personalInfo}
+            value={user.name ? `${user.name}${user.area ? '  ·  ' + user.area : ''}` : undefined}
+            accent="#7B3FFF"
+            onPress={openPersonalInfo}
+          />
+          <View style={s.settingDivider} />
+          <SettingRow
+            icon="🔑"
+            label={t.changePassword}
+            accent="#FFD060"
+            onPress={() => setShowChangePassword(true)}
+          />
+          <View style={s.settingDivider} />
+          <SettingRow
+            icon={isLoggedIn ? '🚪' : '🔐'}
+            label={isLoggedIn ? t.logOut : t.logIn}
+            value={isLoggedIn ? `${t.loggedInAs} ${user.email || displayName}` : t.notLoggedIn}
+            accent={isLoggedIn ? '#FF3B8B' : '#00E5A8'}
+            onPress={() => {
+              if (isLoggedIn) {
+                setIsLoggedIn(false);
+                setUser({ name: '', age: '', area: '', email: '' });
+              } else {
+                setShowLogin(true);
+              }
+            }}
+          />
+        </View>
+
+        {/* ── Footer stamp ── */}
         <View style={s.footerStamp}>
-          <View style={s.stampInner}>
-            <Text style={s.stampLine1}>{t.stampLine1}</Text>
-            <Text style={s.stampLine2}>{t.stampLine2}</Text>
+          <View style={[s.stampInner, { borderColor: stageColor }]}>
+            <Text style={[s.stampLine1, { color: stageColor }]}>{t.stampLine1}</Text>
+            <Text style={[s.stampLine2, { color: stageColor }]}>{t.stampLine2}</Text>
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Personal Info Modal ── */}
+      <Modal visible={showPersonalInfo} transparent animationType="slide" onRequestClose={() => setShowPersonalInfo(false)}>
+        <View style={m.overlay}>
+          <View style={m.card}>
+            <Text style={m.title}>👤  {t.personalInfo}</Text>
+            <Text style={m.fieldLabel}>{t.name}</Text>
+            <TextInput style={m.input} value={editUser.name} onChangeText={(v) => setEditUser((u) => ({ ...u, name: v }))} placeholder={t.name} placeholderTextColor="#44446A" />
+            <Text style={m.fieldLabel}>{t.age}</Text>
+            <TextInput style={m.input} value={editUser.age} onChangeText={(v) => setEditUser((u) => ({ ...u, age: v }))} placeholder={t.age} placeholderTextColor="#44446A" keyboardType="numeric" />
+            <Text style={m.fieldLabel}>{t.area}</Text>
+            <TextInput style={m.input} value={editUser.area} onChangeText={(v) => setEditUser((u) => ({ ...u, area: v }))} placeholder={t.area} placeholderTextColor="#44446A" />
+            <View style={m.row}>
+              <TouchableOpacity style={m.cancelBtn} onPress={() => setShowPersonalInfo(false)}>
+                <Text style={m.cancelText}>{t.cancel}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={m.saveBtn} onPress={savePersonalInfo}>
+                <Text style={m.saveText}>{t.save}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Change Password Modal ── */}
+      <Modal visible={showChangePassword} transparent animationType="slide" onRequestClose={() => setShowChangePassword(false)}>
+        <View style={m.overlay}>
+          <View style={m.card}>
+            <Text style={m.title}>🔑  {t.changePassword}</Text>
+            {pwSaved ? (
+              <View style={m.successBadge}>
+                <Text style={m.successText}>{t.passwordUpdated}</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={m.fieldLabel}>{t.currentPassword}</Text>
+                <TextInput style={m.input} value={pwForm.current} onChangeText={(v) => setPwForm((p) => ({ ...p, current: v }))} placeholder="••••••••" placeholderTextColor="#44446A" secureTextEntry />
+                <Text style={m.fieldLabel}>{t.newPassword}</Text>
+                <TextInput style={m.input} value={pwForm.next} onChangeText={(v) => setPwForm((p) => ({ ...p, next: v }))} placeholder="••••••••" placeholderTextColor="#44446A" secureTextEntry />
+                <Text style={m.fieldLabel}>{t.confirmPassword}</Text>
+                <TextInput style={m.input} value={pwForm.confirm} onChangeText={(v) => setPwForm((p) => ({ ...p, confirm: v }))} placeholder="••••••••" placeholderTextColor="#44446A" secureTextEntry />
+                <View style={m.row}>
+                  <TouchableOpacity style={m.cancelBtn} onPress={() => setShowChangePassword(false)}>
+                    <Text style={m.cancelText}>{t.cancel}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={m.saveBtn} onPress={savePassword}>
+                    <Text style={m.saveText}>{t.save}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Login Modal ── */}
+      <Modal visible={showLogin} transparent animationType="slide" onRequestClose={() => setShowLogin(false)}>
+        <View style={m.overlay}>
+          <View style={m.card}>
+            <Text style={m.title}>🔐  {t.logIn}</Text>
+            <Text style={m.fieldLabel}>{t.email}</Text>
+            <TextInput style={m.input} value={loginForm.email} onChangeText={(v) => setLoginForm((f) => ({ ...f, email: v }))} placeholder="you@email.com" placeholderTextColor="#44446A" keyboardType="email-address" autoCapitalize="none" />
+            <Text style={m.fieldLabel}>{t.password}</Text>
+            <TextInput style={m.input} value={loginForm.password} onChangeText={(v) => setLoginForm((f) => ({ ...f, password: v }))} placeholder="••••••••" placeholderTextColor="#44446A" secureTextEntry />
+            <View style={m.row}>
+              <TouchableOpacity style={m.cancelBtn} onPress={() => setShowLogin(false)}>
+                <Text style={m.cancelText}>{t.cancel}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={m.saveBtn} onPress={doLogin}>
+                <Text style={m.saveText}>{t.logIn}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-const z = StyleSheet.create({
-  row: { flexDirection: 'row', overflow: 'hidden' },
-  triangle: { width: 0, height: 0 },
+const lt = StyleSheet.create({
+  wrap: { flexDirection: 'row', backgroundColor: '#0F0F24', borderRadius: 20, borderWidth: 2, borderColor: '#7B3FFF66', overflow: 'hidden' },
+  btn: { paddingHorizontal: 12, paddingVertical: 5 },
+  active: { backgroundColor: '#7B3FFF' },
+  divider: { width: 1, backgroundColor: '#7B3FFF44' },
+  text: { fontSize: 11, fontWeight: '800', color: '#44446A', letterSpacing: 1, ...FF },
+  activeText: { color: '#fff' },
+});
+
+const sec = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 10 },
+  label: { fontSize: 11, color: '#44446A', fontWeight: '800', letterSpacing: 1.5, ...FF },
+  line: { flex: 1, height: 1, backgroundColor: '#1C1C38' },
+});
+
+const sr = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
+  iconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  icon: { fontSize: 18 },
+  textBlock: { flex: 1, gap: 2 },
+  label: { fontSize: 15, fontWeight: '600', color: '#fff', ...FF },
+  value: { fontSize: 11, color: '#44446A' },
+  chevron: { fontSize: 22, fontWeight: '300' },
+});
+
+const m = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: '#000000CC', justifyContent: 'flex-end' },
+  card: { backgroundColor: '#0F0F24', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 10, borderTopWidth: 1.5, borderColor: '#7B3FFF' },
+  title: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4, ...FF },
+  fieldLabel: { fontSize: 12, color: '#9090B8', fontWeight: '600', marginBottom: 2, ...FF },
+  input: { backgroundColor: '#15152C', borderWidth: 1.5, borderColor: '#1C1C38', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, color: '#fff', fontSize: 14, marginBottom: 4 },
+  row: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  cancelBtn: { flex: 1, backgroundColor: '#15152C', borderRadius: 50, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#1C1C38' },
+  cancelText: { color: '#9090B8', fontSize: 15, fontWeight: '700', ...FF },
+  saveBtn: { flex: 1, backgroundColor: '#7B3FFF', borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
+  saveText: { color: '#fff', fontSize: 15, fontWeight: '700', ...FF },
+  successBadge: { backgroundColor: '#062018', borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#00E5A8' },
+  successText: { color: '#00E5A8', fontSize: 16, fontWeight: '800', ...FF },
 });
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d1a1a' },
-  scroll: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 32, gap: 14 },
-  retroHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  retroIconBox: { width: 52, height: 52, borderRadius: 10, backgroundColor: '#FF6B6B', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#cc4444' },
-  retroIcon: { fontSize: 26 },
-  retroEyebrow: { fontSize: 10, color: '#FF6B6B', fontWeight: '800', letterSpacing: 2 },
-  pageTitle: { fontSize: 26, fontWeight: '800', color: '#fff' },
-  goalBanner: { backgroundColor: '#0d2a22', borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: '#1db89644' },
-  goalInner: { paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
-  goalPre: { fontSize: 10, color: '#1db896', fontWeight: '800', letterSpacing: 2 },
-  goalValue: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  recCard: { backgroundColor: '#1a2a2a', borderRadius: 12, padding: 16, gap: 10, borderWidth: 2, borderColor: '#1e3d3d', borderLeftWidth: 4 },
-  recTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  recIconBox: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  recEmoji: { fontSize: 22 },
-  recTextBlock: { flex: 1, gap: 2 },
-  recTitle: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  recDesc: { fontSize: 12, color: '#8ab8b8', lineHeight: 17 },
-  recArrow: { fontSize: 24, fontWeight: '300' },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1 },
-  tagText: { fontSize: 12, fontWeight: '600' },
-  tip: { backgroundColor: '#061212', borderRadius: 12, padding: 14, borderWidth: 2, borderColor: '#1db89630', flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  tipIcon: { fontSize: 24 },
-  tipText: { flex: 1, gap: 3 },
-  tipTitle: { fontSize: 14, fontWeight: '800', color: '#1db896' },
-  tipBody: { fontSize: 13, color: '#8ab8b8', lineHeight: 18 },
-  footerStamp: { alignSelf: 'center', marginTop: 4 },
-  stampInner: { borderWidth: 3, borderColor: '#FF6B6B', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10, alignItems: 'center', transform: [{ rotate: '-2deg' }] },
-  stampLine1: { fontSize: 11, color: '#FF6B6B', fontWeight: '800', letterSpacing: 3 },
-  stampLine2: { fontSize: 14, color: '#FF6B6B', fontWeight: '800', letterSpacing: 2 },
+  root: { flex: 1, backgroundColor: '#08081A' },
+  scroll: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 6 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  avatarBox: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
+  avatarText: { fontSize: 22, fontWeight: '800', ...FF },
+  headerText: { flex: 1 },
+  eyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 2, ...FF },
+  pageTitle: { fontSize: 22, fontWeight: '800', color: '#fff', ...FF },
+  stageCard: { borderRadius: 20, padding: 16, borderWidth: 1.5, gap: 10, marginBottom: 4 },
+  stageBubbleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stageStickerBox: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  stageSticker: { fontSize: 26 },
+  stageBubble: { borderRadius: 50, paddingHorizontal: 18, paddingVertical: 8 },
+  stageBubbleText: { fontSize: 15, fontWeight: '800', color: '#08081A', ...FF },
+  stageDesc: { fontSize: 13, lineHeight: 18 },
+  stageLocked: { fontSize: 11, color: '#44446A', letterSpacing: 0.3 },
+  settingsBlock: { backgroundColor: '#0F0F24', borderRadius: 20, borderWidth: 1.5, borderColor: '#1C1C38', overflow: 'hidden' },
+  settingDivider: { height: 1, backgroundColor: '#1C1C38', marginHorizontal: 16 },
+  footerStamp: { alignSelf: 'center', marginTop: 12 },
+  stampInner: { borderWidth: 2, borderRadius: 50, paddingHorizontal: 22, paddingVertical: 10, alignItems: 'center', transform: [{ rotate: '-2deg' }] },
+  stampLine1: { fontSize: 11, fontWeight: '800', letterSpacing: 3, ...FF },
+  stampLine2: { fontSize: 14, fontWeight: '800', letterSpacing: 2, ...FF },
 });

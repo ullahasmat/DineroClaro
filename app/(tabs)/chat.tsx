@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  FlatList, ScrollView, StyleSheet,
+  FlatList, StyleSheet,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useLocale } from '@/context/AppContext';
 
 const API_BASE = 'http://localhost:8000';
+const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 
 const T = {
   en: {
@@ -41,12 +42,25 @@ const T = {
 
 type Message = { id: string; role: 'user' | 'assistant'; content: string };
 
-function Scanlines() {
+function LangToggle() {
+  const { locale, setLocale } = useLocale();
   return (
-    <View style={sc.wrap}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <View key={i} style={sc.line} />
-      ))}
+    <View style={lt.wrap}>
+      <TouchableOpacity
+        style={[lt.btn, locale === 'en' && lt.active]}
+        onPress={() => setLocale('en')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}
+      >
+        <Text style={[lt.text, locale === 'en' && lt.activeText]}>EN</Text>
+      </TouchableOpacity>
+      <View style={lt.divider} />
+      <TouchableOpacity
+        style={[lt.btn, locale === 'es' && lt.active]}
+        onPress={() => setLocale('es')}
+        hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
+      >
+        <Text style={[lt.text, locale === 'es' && lt.activeText]}>ES</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -92,27 +106,20 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       style={s.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={60}
+      keyboardVerticalOffset={84}
     >
       <View style={s.header}>
-        <Scanlines />
-        <View style={s.headerInner}>
-          <View style={s.avatarWrap}>
-            <View style={s.avatar}>
-              <Text style={s.avatarEmoji}>🤖</Text>
-            </View>
-            <View style={s.avatarOnline} />
+        <View style={s.avatarWrap}>
+          <View style={s.avatar}>
+            <Text style={s.avatarEmoji}>🤖</Text>
           </View>
-          <View style={s.headerText}>
-            <Text style={s.headerEyebrow}>{t.eyebrow}</Text>
-            <Text style={s.headerTitle}>Lana AI</Text>
-          </View>
-          <View style={s.termDots}>
-            <View style={[s.dot, { backgroundColor: '#FF6B6B' }]} />
-            <View style={[s.dot, { backgroundColor: '#FFE566' }]} />
-            <View style={[s.dot, { backgroundColor: '#1db896' }]} />
-          </View>
+          <View style={s.avatarOnline} />
         </View>
+        <View style={s.headerText}>
+          <Text style={s.headerEyebrow}>{t.eyebrow}</Text>
+          <Text style={s.headerTitle}>Lana AI</Text>
+        </View>
+        <LangToggle />
       </View>
 
       <View style={s.contextBar}>
@@ -147,22 +154,26 @@ export default function ChatScreen() {
         )}
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.suggestions}>
-        {t.suggestions.map((sug) => (
-          <TouchableOpacity key={sug} style={s.chip} onPress={() => send(sug)}>
-            <Text style={s.chipText}>{sug}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={s.suggestions}>
+        {t.suggestions.map((sug, i) => {
+          const emoji = sug.match(/^\S+/)?.[0] ?? '';
+          const label = sug.replace(/^\S+\s*/, '');
+          return (
+            <TouchableOpacity key={sug} style={[s.chip, i < t.suggestions.length - 1 && s.chipBorder]} onPress={() => send(sug)} activeOpacity={0.6}>
+              <Text style={s.chipEmoji}>{emoji}</Text>
+              <Text style={s.chipText}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <View style={s.inputRow}>
-        <Text style={s.inputPrefix}>{'>'}</Text>
         <TextInput
           style={s.input}
           value={input}
           onChangeText={setInput}
           placeholder={t.placeholder}
-          placeholderTextColor="#3a6868"
+          placeholderTextColor="#44446A"
           onSubmitEditing={() => send()}
           returnKeyType="send"
           editable={!loading}
@@ -179,47 +190,69 @@ export default function ChatScreen() {
   );
 }
 
-const sc = StyleSheet.create({
-  wrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, gap: 10, overflow: 'hidden', opacity: 0.06 },
-  line: { height: 1, backgroundColor: '#1db896', width: '100%' },
+const lt = StyleSheet.create({
+  wrap: { flexDirection: 'row', backgroundColor: '#0F0F24', borderRadius: 20, borderWidth: 2, borderColor: '#7B3FFF66', overflow: 'hidden' },
+  btn: { paddingHorizontal: 12, paddingVertical: 5 },
+  active: { backgroundColor: '#7B3FFF' },
+  divider: { width: 1, backgroundColor: '#7B3FFF44' },
+  text: { fontSize: 11, fontWeight: '800', color: '#44446A', letterSpacing: 1, ...(FONT ? { fontFamily: FONT } : {}) },
+  activeText: { color: '#fff' },
 });
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d1a1a' },
-  header: { paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#0a1f1f', borderBottomWidth: 2, borderColor: '#1db896', overflow: 'hidden' },
-  headerInner: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  root: { flex: 1, backgroundColor: '#08081A' },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 56 : 40,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    backgroundColor: '#0B0B1E',
+    borderBottomWidth: 1.5,
+    borderColor: '#7B3FFF55',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   avatarWrap: { position: 'relative' },
-  avatar: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#7C5CBF', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#5a3a9e' },
+  avatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#1A0A3A', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#7B3FFF66' },
   avatarEmoji: { fontSize: 24 },
-  avatarOnline: { position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#1db896', borderWidth: 2, borderColor: '#0a1f1f' },
+  avatarOnline: { position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#00E5A8', borderWidth: 2, borderColor: '#0B0B1E' },
   headerText: { flex: 1 },
-  headerEyebrow: { fontSize: 9, color: '#1db896', fontWeight: '800', letterSpacing: 2 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  termDots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  contextBar: { paddingHorizontal: 16, paddingVertical: 6, backgroundColor: '#061212', borderBottomWidth: 1, borderColor: '#1e3333', flexDirection: 'row', alignItems: 'center' },
-  contextPre: { color: '#1db896', fontSize: 12, fontWeight: '800', marginRight: 4 },
-  contextText: { fontSize: 11, color: '#3a7070', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
-  messageList: { padding: 16, gap: 10, flexGrow: 1 },
+  headerEyebrow: { fontSize: 9, color: '#7B3FFF', fontWeight: '800', letterSpacing: 2, ...(FONT ? { fontFamily: FONT } : {}) },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
+  contextBar: { paddingHorizontal: 16, paddingVertical: 7, backgroundColor: '#06061A', borderBottomWidth: 1, borderColor: '#1C1C38', flexDirection: 'row', alignItems: 'center' },
+  contextPre: { color: '#7B3FFF', fontSize: 12, fontWeight: '800', marginRight: 4 },
+  contextText: { fontSize: 11, color: '#44446A', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
+  messageList: { padding: 16, gap: 10, flexGrow: 1, paddingBottom: 8 },
   emptyWrap: { alignItems: 'center', marginTop: 40, gap: 6 },
-  emptyEmoji: { fontSize: 40 },
-  emptyHint: { color: '#5a8888', fontSize: 14, fontWeight: '600' },
-  emptyHint2: { color: '#2a5050', fontSize: 11, letterSpacing: 1 },
+  emptyEmoji: { fontSize: 42 },
+  emptyHint: { color: '#9090B8', fontSize: 14, fontWeight: '600', ...(FONT ? { fontFamily: FONT } : {}) },
+  emptyHint2: { color: '#3C3C5C', fontSize: 11, letterSpacing: 1 },
   bubbleWrap: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginVertical: 2 },
   bubbleLeft: { justifyContent: 'flex-start' },
   bubbleRight: { justifyContent: 'flex-end' },
-  aiBadge: { width: 24, height: 24, borderRadius: 6, backgroundColor: '#7C5CBF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  aiBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  userBubble: { backgroundColor: '#1db896', borderRadius: 14, borderBottomRightRadius: 4, padding: 12, maxWidth: '78%', borderWidth: 2, borderColor: '#16a07a' },
-  aiBubble: { backgroundColor: '#122222', borderRadius: 14, borderBottomLeftRadius: 4, padding: 12, maxWidth: '78%', borderWidth: 2, borderColor: '#1e3d3d' },
+  aiBadge: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#7B3FFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  aiBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800', ...(FONT ? { fontFamily: FONT } : {}) },
+  userBubble: { backgroundColor: '#7B3FFF', borderRadius: 20, borderBottomRightRadius: 6, padding: 12, maxWidth: '78%' },
+  aiBubble: { backgroundColor: '#0F0F24', borderRadius: 20, borderBottomLeftRadius: 6, padding: 12, maxWidth: '78%', borderWidth: 1.5, borderColor: '#1C1C38' },
   userText: { color: '#fff', fontSize: 14, lineHeight: 20, fontWeight: '500' },
-  aiText: { color: '#d0eee8', fontSize: 14, lineHeight: 20 },
-  suggestions: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
-  chip: { backgroundColor: '#0d2020', borderWidth: 2, borderColor: '#1e3d3d', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
-  chipText: { color: '#8ab8b8', fontSize: 12, fontWeight: '600' },
-  inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 28 : 14, paddingTop: 6, backgroundColor: '#061212', borderTopWidth: 1, borderColor: '#1e3333' },
-  inputPrefix: { color: '#1db896', fontSize: 16, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
-  input: { flex: 1, backgroundColor: '#0d1e1e', borderWidth: 2, borderColor: '#1e3d3d', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, color: '#fff', fontSize: 14 },
-  sendBtn: { width: 44, height: 44, backgroundColor: '#1db896', borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#16a07a' },
+  aiText: { color: '#D0D0E8', fontSize: 14, lineHeight: 20 },
+  suggestions: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 4 },
+  chipBorder: { borderBottomWidth: 1, borderBottomColor: '#1C1C38' },
+  chipEmoji: { fontSize: 16, width: 24, textAlign: 'center' },
+  chipText: { color: '#9090B8', fontSize: 13, fontWeight: '500' },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: Platform.OS === 'ios' ? 104 : 96,
+    paddingTop: 8,
+    backgroundColor: '#06061A',
+    borderTopWidth: 1,
+    borderColor: '#1C1C38',
+  },
+  input: { flex: 1, backgroundColor: '#0F0F24', borderWidth: 1.5, borderColor: '#1C1C38', borderRadius: 50, paddingHorizontal: 18, paddingVertical: 12, color: '#fff', fontSize: 14 },
+  sendBtn: { width: 46, height: 46, backgroundColor: '#7B3FFF', borderRadius: 50, alignItems: 'center', justifyContent: 'center' },
   sendIcon: { color: '#fff', fontSize: 14, fontWeight: '800' },
 });

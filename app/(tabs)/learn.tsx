@@ -5,6 +5,31 @@ import {
 } from 'react-native';
 import { useLocale } from '@/context/AppContext';
 
+const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
+
+function LangToggle() {
+  const { locale, setLocale } = useLocale();
+  return (
+    <View style={lt.wrap}>
+      <TouchableOpacity
+        style={[lt.btn, locale === 'en' && lt.active]}
+        onPress={() => setLocale('en')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}
+      >
+        <Text style={[lt.text, locale === 'en' && lt.activeText]}>EN</Text>
+      </TouchableOpacity>
+      <View style={lt.divider} />
+      <TouchableOpacity
+        style={[lt.btn, locale === 'es' && lt.active]}
+        onPress={() => setLocale('es')}
+        hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
+      >
+        <Text style={[lt.text, locale === 'es' && lt.activeText]}>ES</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const T = {
   en: {
     eyebrow: '◆ KNOWLEDGE BASE ◆',
@@ -111,14 +136,14 @@ const T = {
 type Status = 'done' | 'in-progress' | 'not-started';
 
 const STATUS_COLOR: Record<Status, string> = {
-  done: '#1db896',
-  'in-progress': '#FFE566',
-  'not-started': '#2a3a3a',
+  done: '#00E5A8',
+  'in-progress': '#FFD060',
+  'not-started': '#2A2A48',
 };
 const STATUS_BG: Record<Status, string> = {
-  done: '#0d2a22',
-  'in-progress': '#2a2000',
-  'not-started': '#1a2a2a',
+  done: '#06201A',
+  'in-progress': '#1E1A00',
+  'not-started': '#0F0F24',
 };
 
 const INITIAL_STATUSES: Record<string, Status> = {
@@ -131,7 +156,7 @@ function XpBlocks({ pct }: { pct: number }) {
   return (
     <View style={xp.row}>
       {Array.from({ length: total }).map((_, i) => (
-        <View key={i} style={[xp.block, { backgroundColor: i < filled ? '#1db896' : '#1e3333' }]} />
+        <View key={i} style={[xp.block, { backgroundColor: i < filled ? '#00E5A8' : '#1C1C38' }]} />
       ))}
     </View>
   );
@@ -144,7 +169,7 @@ export default function LearnScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, Status>>(INITIAL_STATUSES);
 
-  const allItems = t.sections.flatMap((s) => s.items);
+  const allItems = t.sections.flatMap((sec) => sec.items);
   const selected = selectedId ? allItems.find((i) => i.id === selectedId) ?? null : null;
 
   function advance(id: string) {
@@ -155,7 +180,7 @@ export default function LearnScreen() {
     });
   }
 
-  const doneCount = Object.values(statuses).filter((s) => s === 'done').length;
+  const doneCount = Object.values(statuses).filter((st) => st === 'done').length;
   const total = allItems.length;
   const xpTotal = doneCount * 50;
 
@@ -168,14 +193,15 @@ export default function LearnScreen() {
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={s.retroHeader}>
-          <View style={s.retroIconBox}>
-            <Text style={s.retroIcon}>📚</Text>
+        <View style={s.header}>
+          <View style={s.iconBox}>
+            <Text style={s.icon}>📚</Text>
           </View>
-          <View>
-            <Text style={s.retroEyebrow}>{t.eyebrow}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.eyebrow}>{t.eyebrow}</Text>
             <Text style={s.pageTitle}>{t.title}</Text>
           </View>
+          <LangToggle />
         </View>
 
         <View style={s.xpCard}>
@@ -207,11 +233,11 @@ export default function LearnScreen() {
               return (
                 <TouchableOpacity
                   key={lesson.id}
-                  style={[s.lessonCard, { backgroundColor: STATUS_BG[status], borderColor: STATUS_COLOR[status] + '55' }]}
+                  style={[s.lessonCard, { backgroundColor: STATUS_BG[status], borderColor: STATUS_COLOR[status] + '44' }]}
                   onPress={() => setSelectedId(lesson.id)}
                   activeOpacity={0.75}
                 >
-                  <View style={[s.lessonIconBox, { backgroundColor: STATUS_COLOR[status] + '22' }]}>
+                  <View style={[s.lessonIconBox, { backgroundColor: STATUS_COLOR[status] + '1A' }]}>
                     <Text style={s.lessonEmoji}>{lesson.emoji}</Text>
                   </View>
                   <View style={s.lessonInfo}>
@@ -252,10 +278,10 @@ export default function LearnScreen() {
                 <Text style={s.modalBody}>{selected.body}</Text>
                 <View style={s.modalRow}>
                   <TouchableOpacity
-                    style={[s.modalBtn, { backgroundColor: '#1e3333', borderColor: '#2a4a4a' }]}
+                    style={[s.modalBtn, s.modalBtnCancel]}
                     onPress={() => setSelectedId(null)}
                   >
-                    <Text style={[s.modalBtnText, { color: '#8ab8b8' }]}>{t.close}</Text>
+                    <Text style={[s.modalBtnText, { color: '#9090B8' }]}>{t.close}</Text>
                   </TouchableOpacity>
                   {statuses[selected.id] !== 'done' && (
                     <TouchableOpacity
@@ -277,53 +303,63 @@ export default function LearnScreen() {
   );
 }
 
+const lt = StyleSheet.create({
+  wrap: { flexDirection: 'row', backgroundColor: '#0F0F24', borderRadius: 20, borderWidth: 2, borderColor: '#7B3FFF66', overflow: 'hidden' },
+  btn: { paddingHorizontal: 12, paddingVertical: 5 },
+  active: { backgroundColor: '#7B3FFF' },
+  divider: { width: 1, backgroundColor: '#7B3FFF44' },
+  text: { fontSize: 11, fontWeight: '800', color: '#44446A', letterSpacing: 1, ...(FONT ? { fontFamily: FONT } : {}) },
+  activeText: { color: '#fff' },
+});
+
 const xp = StyleSheet.create({
   row: { flexDirection: 'row', gap: 3 },
-  block: { width: 14, height: 10, borderRadius: 2 },
+  block: { width: 14, height: 10, borderRadius: 3 },
 });
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d1a1a' },
-  scroll: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 32, gap: 12 },
-  retroHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  retroIconBox: { width: 52, height: 52, borderRadius: 10, backgroundColor: '#1a4a3a', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#1db896' },
-  retroIcon: { fontSize: 26 },
-  retroEyebrow: { fontSize: 10, color: '#1db896', fontWeight: '800', letterSpacing: 2 },
-  pageTitle: { fontSize: 26, fontWeight: '800', color: '#fff' },
-  xpCard: { backgroundColor: '#0d2a22', borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#1db89666', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  root: { flex: 1, backgroundColor: '#08081A' },
+  scroll: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  iconBox: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#0D1E2A', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#00E5A844' },
+  icon: { fontSize: 26 },
+  eyebrow: { fontSize: 10, color: '#00E5A8', fontWeight: '800', letterSpacing: 2, ...(FONT ? { fontFamily: FONT } : {}) },
+  pageTitle: { fontSize: 26, fontWeight: '800', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
+  xpCard: { backgroundColor: '#0C1C18', borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: '#00E5A844', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   xpLeft: { gap: 4 },
-  xpLabel: { fontSize: 10, color: '#1db896', fontWeight: '800', letterSpacing: 2 },
-  xpNum: { fontSize: 32, fontWeight: '800', color: '#FFE566' },
-  xpUnit: { fontSize: 16, color: '#8ab8b8', fontWeight: '400' },
+  xpLabel: { fontSize: 10, color: '#00E5A8', fontWeight: '800', letterSpacing: 2, ...(FONT ? { fontFamily: FONT } : {}) },
+  xpNum: { fontSize: 34, fontWeight: '800', color: '#FFD060', ...(FONT ? { fontFamily: FONT } : {}) },
+  xpUnit: { fontSize: 16, color: '#9090B8', fontWeight: '400' },
   xpRight: { alignItems: 'flex-end', gap: 6 },
-  xpProgress: { fontSize: 11, color: '#8ab8b8' },
+  xpProgress: { fontSize: 11, color: '#9090B8' },
   levelRow: { flexDirection: 'row' },
-  levelBadge: { backgroundColor: '#1db896', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 3 },
-  levelText: { color: '#0d1a1a', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  levelBadge: { backgroundColor: '#7B3FFF', borderRadius: 50, paddingHorizontal: 12, paddingVertical: 4 },
+  levelText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 1, ...(FONT ? { fontFamily: FONT } : {}) },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 6 },
   sectionEmoji: { fontSize: 16 },
-  sectionLabel: { fontSize: 12, color: '#8ab8b8', fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
-  sectionLine: { flex: 1, height: 1, backgroundColor: '#1e3333' },
-  lessonCard: { borderRadius: 12, padding: 14, borderWidth: 2, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  lessonIconBox: { width: 48, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  sectionLabel: { fontSize: 12, color: '#9090B8', fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', ...(FONT ? { fontFamily: FONT } : {}) },
+  sectionLine: { flex: 1, height: 1, backgroundColor: '#1C1C38' },
+  lessonCard: { borderRadius: 20, padding: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  lessonIconBox: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   lessonEmoji: { fontSize: 22 },
   lessonInfo: { flex: 1, gap: 4 },
-  lessonTitle: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  lessonTitle: { fontSize: 14, fontWeight: '700', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
   statusText: { fontSize: 11, fontWeight: '600' },
-  lessonBarTrack: { width: '100%', height: 4, backgroundColor: '#1e3333', borderRadius: 2, overflow: 'hidden', marginTop: 2 },
-  lessonBarFill: { height: '100%', borderRadius: 2 },
-  chevron: { fontSize: 22, color: '#3a6868', fontWeight: '300' },
-  footerBadge: { alignSelf: 'center', borderWidth: 2, borderColor: '#FFE566', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8, marginTop: 4 },
-  footerText: { color: '#FFE566', fontSize: 12, fontWeight: '800', letterSpacing: 2 },
-  modalOverlay: { flex: 1, backgroundColor: '#000000bb', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#0d1e1e', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 14, borderTopWidth: 3, borderColor: '#7C5CBF' },
+  lessonBarTrack: { width: '100%', height: 4, backgroundColor: '#1C1C38', borderRadius: 4, overflow: 'hidden', marginTop: 2 },
+  lessonBarFill: { height: '100%', borderRadius: 4 },
+  chevron: { fontSize: 22, color: '#3C3C5C', fontWeight: '300' },
+  footerBadge: { alignSelf: 'center', borderWidth: 2, borderColor: '#FFD060', borderRadius: 50, paddingHorizontal: 22, paddingVertical: 8, marginTop: 4 },
+  footerText: { color: '#FFD060', fontSize: 12, fontWeight: '800', letterSpacing: 2, ...(FONT ? { fontFamily: FONT } : {}) },
+  modalOverlay: { flex: 1, backgroundColor: '#000000CC', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#0F0F24', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 14, borderTopWidth: 1.5, borderColor: '#7B3FFF' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   modalEmoji: { fontSize: 28 },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', flex: 1 },
-  modalXpBadge: { alignSelf: 'flex-start', backgroundColor: '#FFE566', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 4 },
-  modalXpText: { color: '#0d1a1a', fontSize: 13, fontWeight: '800' },
-  modalBody: { fontSize: 14, color: '#c0dada', lineHeight: 22 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', flex: 1, ...(FONT ? { fontFamily: FONT } : {}) },
+  modalXpBadge: { alignSelf: 'flex-start', backgroundColor: '#FFD060', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 5 },
+  modalXpText: { color: '#08081A', fontSize: 13, fontWeight: '800', ...(FONT ? { fontFamily: FONT } : {}) },
+  modalBody: { fontSize: 14, color: '#C0C0D8', lineHeight: 22 },
   modalRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  modalBtn: { flex: 1, backgroundColor: '#1db896', borderRadius: 8, paddingVertical: 13, alignItems: 'center', borderWidth: 2, borderColor: '#16a07a' },
-  modalBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  modalBtn: { flex: 1, backgroundColor: '#7B3FFF', borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
+  modalBtnCancel: { backgroundColor: '#15152C', borderWidth: 1.5, borderColor: '#1C1C38' },
+  modalBtnText: { color: '#fff', fontSize: 14, fontWeight: '700', ...(FONT ? { fontFamily: FONT } : {}) },
 });

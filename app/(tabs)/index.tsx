@@ -18,7 +18,7 @@ const T = {
     checking: 'CHECKING',
     checkingPrompt: 'Checking balance:',
     tapEdit: 'tap to edit',
-    creditCard: 'Credit card',
+    creditCard: 'Credit cards',
     used: 'used',
     balance: 'balance',
     addCard: '＋ Add another card or account',
@@ -43,7 +43,7 @@ const T = {
     checking: 'CUENTA',
     checkingPrompt: 'Saldo en cuenta:',
     tapEdit: 'toca para editar',
-    creditCard: 'Tarjeta de crédito',
+    creditCard: 'Tarjetas de crédito',
     used: 'usado',
     balance: 'saldo',
     addCard: '＋ Agregar tarjeta o cuenta',
@@ -62,13 +62,34 @@ const T = {
 type Card = { name: string; balance: number; limit: number };
 const DEFAULT_CARDS: Card[] = [{ name: 'Discover Secured', balance: 110, limit: 500 }];
 
-function PixelRow({ color = '#1db896' }: { color?: string }) {
+const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
+
+function LangToggle() {
+  const { locale, setLocale } = useLocale();
   return (
-    <View style={r.pixelRow}>
-      {Array.from({ length: 12 }).map((_, i) => (
-        <View key={i} style={[r.pixel, { backgroundColor: i % 2 === 0 ? color : 'transparent' }]} />
-      ))}
+    <View style={lt.wrap}>
+      <TouchableOpacity
+        style={[lt.btn, locale === 'en' && lt.active]}
+        onPress={() => setLocale('en')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}
+      >
+        <Text style={[lt.text, locale === 'en' && lt.activeText]}>EN</Text>
+      </TouchableOpacity>
+      <View style={lt.divider} />
+      <TouchableOpacity
+        style={[lt.btn, locale === 'es' && lt.active]}
+        onPress={() => setLocale('es')}
+        hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
+      >
+        <Text style={[lt.text, locale === 'es' && lt.activeText]}>ES</Text>
+      </TouchableOpacity>
     </View>
+  );
+}
+
+function Glow({ color }: { color: string }) {
+  return (
+    <View style={[g.bar, { backgroundColor: color }]} />
   );
 }
 
@@ -109,42 +130,43 @@ export default function FinancesScreen() {
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={s.retroHeader}>
-          <View style={s.retroIconBox}>
-            <Text style={s.retroIcon}>💰</Text>
+        <View style={s.header}>
+          <View style={s.iconBox}>
+            <Text style={s.icon}>💰</Text>
           </View>
-          <View style={s.retroTitleBlock}>
-            <Text style={s.retroEyebrow}>{t.eyebrow}</Text>
+          <View style={s.titleBlock}>
+            <Text style={s.eyebrow}>{t.eyebrow}</Text>
             <Text style={s.pageTitle}>{t.title}</Text>
           </View>
+          <LangToggle />
         </View>
-        <PixelRow color="#FFE566" />
+        <Glow color="#FFD06044" />
 
         <View style={s.snapshotRow}>
           <Text style={s.sectionLabel}>{t.snapshot}</Text>
-          <Stamp label="● LIVE" color="#1db896" />
+          <Stamp label="● LIVE" color="#00E5A8" />
         </View>
 
-        <View style={[s.card, s.cardAccentYellow]}>
+        <View style={[s.card, s.cardGold]}>
           <View style={s.cardTopRow}>
             <Text style={s.cardLabel}>{t.creditScore}</Text>
             <Text style={s.retroStar}>⭐</Text>
           </View>
           <Text style={s.scoreValue}>{creditScore}</Text>
           <View style={s.progressTrack}>
-            <View style={[s.progressFill, { width: `${Math.min(scorePct, 100)}%` }]} />
+            <View style={[s.progressFill, { width: `${Math.min(scorePct, 100)}%`, backgroundColor: '#FFD060' }]} />
           </View>
           <View style={s.scoreRow}>
             <Text style={s.scoreEdge}>{scoreMin}</Text>
-            <Text style={s.scoreGoalText}>▶ {t.goal}: {scoreGoal}</Text>
+            <Text style={[s.scoreGoalText, { color: '#FFD060' }]}>▶ {t.goal}: {scoreGoal}</Text>
           </View>
         </View>
 
         <View style={s.grid2}>
           <TouchableOpacity
-            style={[s.card, s.flex1, s.cardAccentPink]}
+            style={[s.card, s.flex1, s.cardPink]}
             onPress={() => { const val = prompt(t.incomePrompt, String(income)); if (val) setIncome(parseFloat(val) || income); }}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
             <Text style={s.cardLabel}>{t.income}</Text>
             <Text style={s.retroEmoji}>💵</Text>
@@ -152,9 +174,9 @@ export default function FinancesScreen() {
             <Text style={s.editHint}>{t.tapEdit}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.card, s.flex1, s.cardAccentBlue]}
+            style={[s.card, s.flex1, s.cardViolet]}
             onPress={() => { const val = prompt(t.checkingPrompt, String(checking)); if (val) setChecking(parseFloat(val) || checking); }}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
             <Text style={s.cardLabel}>{t.checking}</Text>
             <Text style={s.retroEmoji}>🏦</Text>
@@ -163,19 +185,19 @@ export default function FinancesScreen() {
           </TouchableOpacity>
         </View>
 
-        <PixelRow color="#7C5CBF" />
+        <Glow color="#7B3FFF44" />
         <Text style={s.sectionLabel}>{t.creditCard}</Text>
 
         {cards.map((card, i) => {
           const util = card.limit > 0 ? (card.balance / card.limit) * 100 : 0;
           return (
-            <View key={i} style={[s.card, s.cardAccentGreen]}>
+            <View key={i} style={[s.card, s.cardMint]}>
               <View style={s.cardTopRow}>
                 <Text style={s.cardName}>💳  {card.name}</Text>
-                <Stamp label={`${Math.round(util)}% ${t.used}`} color={util < 30 ? '#1db896' : '#FF6B6B'} />
+                <Stamp label={`${Math.round(util)}% ${t.used}`} color={util < 30 ? '#00E5A8' : '#FF3B8B'} />
               </View>
               <View style={s.progressTrack}>
-                <View style={[s.progressFill, { width: `${Math.min(util, 100)}%`, backgroundColor: util < 30 ? '#1db896' : '#FF6B6B' }]} />
+                <View style={[s.progressFill, { width: `${Math.min(util, 100)}%`, backgroundColor: util < 30 ? '#00E5A8' : '#FF3B8B' }]} />
               </View>
               <Text style={s.cardBalance}>${card.balance} {t.balance}</Text>
             </View>
@@ -188,7 +210,7 @@ export default function FinancesScreen() {
 
         <View style={s.tip}>
           <Text style={s.tipIcon}>📟</Text>
-          <View>
+          <View style={s.tipTextBlock}>
             <Text style={s.tipTitle}>{t.tipTitle}</Text>
             <Text style={s.tipBody}>{t.tipBody}</Text>
           </View>
@@ -202,14 +224,14 @@ export default function FinancesScreen() {
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
-            <PixelRow color="#FFE566" />
+            <Glow color="#FFD06066" />
             <Text style={s.modalTitle}>{t.modalTitle}</Text>
-            <TextInput style={s.input} placeholder={t.cardName} placeholderTextColor="#5a8888" value={newCard.name} onChangeText={(v) => setNewCard((p) => ({ ...p, name: v }))} />
-            <TextInput style={s.input} placeholder={t.currentBalance} placeholderTextColor="#5a8888" keyboardType="numeric" value={newCard.balance} onChangeText={(v) => setNewCard((p) => ({ ...p, balance: v }))} />
-            <TextInput style={s.input} placeholder={t.creditLimit} placeholderTextColor="#5a8888" keyboardType="numeric" value={newCard.limit} onChangeText={(v) => setNewCard((p) => ({ ...p, limit: v }))} />
+            <TextInput style={s.input} placeholder={t.cardName} placeholderTextColor="#44446A" value={newCard.name} onChangeText={(v) => setNewCard((p) => ({ ...p, name: v }))} />
+            <TextInput style={s.input} placeholder={t.currentBalance} placeholderTextColor="#44446A" keyboardType="numeric" value={newCard.balance} onChangeText={(v) => setNewCard((p) => ({ ...p, balance: v }))} />
+            <TextInput style={s.input} placeholder={t.creditLimit} placeholderTextColor="#44446A" keyboardType="numeric" value={newCard.limit} onChangeText={(v) => setNewCard((p) => ({ ...p, limit: v }))} />
             <View style={s.modalRow}>
-              <TouchableOpacity style={[s.modalBtn, { backgroundColor: '#1e3333' }]} onPress={() => setModalVisible(false)}>
-                <Text style={[s.modalBtnText, { color: '#8ab8b8' }]}>{t.cancel}</Text>
+              <TouchableOpacity style={[s.modalBtn, s.modalBtnCancel]} onPress={() => setModalVisible(false)}>
+                <Text style={[s.modalBtnText, { color: '#9090B8' }]}>{t.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.modalBtn} onPress={addCard}>
                 <Text style={s.modalBtnText}>{t.add}</Text>
@@ -222,58 +244,71 @@ export default function FinancesScreen() {
   );
 }
 
+const lt = StyleSheet.create({
+  wrap: { flexDirection: 'row', backgroundColor: '#0F0F24', borderRadius: 20, borderWidth: 2, borderColor: '#7B3FFF66', overflow: 'hidden' },
+  btn: { paddingHorizontal: 12, paddingVertical: 5 },
+  active: { backgroundColor: '#7B3FFF' },
+  divider: { width: 1, backgroundColor: '#7B3FFF44' },
+  text: { fontSize: 11, fontWeight: '800', color: '#44446A', letterSpacing: 1, ...(Platform.OS === 'ios' ? { fontFamily: 'Avenir Next' } : {}) },
+  activeText: { color: '#fff' },
+});
+
+const g = StyleSheet.create({
+  bar: { height: 3, borderRadius: 2, marginVertical: 2 },
+});
+
 const r = StyleSheet.create({
-  pixelRow: { flexDirection: 'row', gap: 4, paddingVertical: 4 },
-  pixel: { width: 8, height: 8, borderRadius: 1 },
-  stamp: { borderWidth: 2, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 2 },
-  stampText: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  stamp: { borderWidth: 2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  stampText: { fontSize: 10, fontWeight: '800', letterSpacing: 1, ...(Platform.OS === 'ios' ? { fontFamily: 'Avenir Next' } : {}) },
 });
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d1a1a' },
-  scroll: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 32, gap: 12 },
-  retroHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  retroIconBox: { width: 52, height: 52, borderRadius: 10, backgroundColor: '#FFE566', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#c9b840' },
-  retroIcon: { fontSize: 26 },
-  retroTitleBlock: { gap: 2 },
-  retroEyebrow: { fontSize: 10, color: '#FFE566', fontWeight: '800', letterSpacing: 2 },
-  pageTitle: { fontSize: 26, fontWeight: '800', color: '#fff' },
+  root: { flex: 1, backgroundColor: '#08081A' },
+  scroll: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  iconBox: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#2A1A00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFD06055' },
+  icon: { fontSize: 26 },
+  titleBlock: { flex: 1, gap: 2 },
+  eyebrow: { fontSize: 10, color: '#FFD060', fontWeight: '800', letterSpacing: 2, ...(FONT ? { fontFamily: FONT } : {}) },
+  pageTitle: { fontSize: 26, fontWeight: '800', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
   snapshotRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionLabel: { fontSize: 13, color: '#8ab8b8', fontWeight: '600', letterSpacing: 0.5 },
-  card: { backgroundColor: '#1a2a2a', borderRadius: 12, padding: 16, gap: 8, borderWidth: 2, borderColor: 'transparent' },
-  cardAccentYellow: { borderColor: '#FFE56633' },
-  cardAccentPink: { borderColor: '#FF6B6B33' },
-  cardAccentBlue: { borderColor: '#7C5CBF33' },
-  cardAccentGreen: { borderColor: '#1db89633' },
+  sectionLabel: { fontSize: 12, color: '#9090B8', fontWeight: '600', letterSpacing: 0.5, ...(FONT ? { fontFamily: FONT } : {}) },
+  card: { backgroundColor: '#0F0F24', borderRadius: 20, padding: 16, gap: 8, borderWidth: 1.5, borderColor: 'transparent' },
+  cardGold: { borderColor: '#FFD06033' },
+  cardPink: { borderColor: '#FF3B8B33' },
+  cardViolet: { borderColor: '#7B3FFF44' },
+  cardMint: { borderColor: '#00E5A833' },
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardLabel: { fontSize: 11, color: '#8ab8b8', textTransform: 'uppercase', letterSpacing: 1, fontWeight: '700' },
+  cardLabel: { fontSize: 11, color: '#9090B8', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: '700', ...(FONT ? { fontFamily: FONT } : {}) },
   retroStar: { fontSize: 16 },
   retroEmoji: { fontSize: 22 },
-  scoreValue: { fontSize: 40, fontWeight: '800', color: '#FFE566' },
-  progressTrack: { width: '100%', height: 8, backgroundColor: '#1e3333', borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#1db896', borderRadius: 2 },
+  scoreValue: { fontSize: 42, fontWeight: '800', color: '#FFD060', ...(FONT ? { fontFamily: FONT } : {}) },
+  progressTrack: { width: '100%', height: 6, backgroundColor: '#1C1C38', borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#00E5A8', borderRadius: 4 },
   scoreRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  scoreEdge: { fontSize: 12, color: '#5a8888' },
-  scoreGoalText: { fontSize: 12, color: '#1db896', fontWeight: '700' },
+  scoreEdge: { fontSize: 12, color: '#44446A' },
+  scoreGoalText: { fontSize: 12, fontWeight: '700' },
   grid2: { flexDirection: 'row', gap: 12 },
   flex1: { flex: 1 },
-  bigNum: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  editHint: { fontSize: 10, color: '#3a6868', letterSpacing: 0.5 },
-  cardName: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  cardBalance: { fontSize: 12, color: '#8ab8b8' },
-  addCard: { borderWidth: 2, borderColor: '#1e3d3d', borderStyle: 'dashed', borderRadius: 12, padding: 16, alignItems: 'center' },
-  addCardText: { color: '#5a8888', fontSize: 14, fontWeight: '600' },
-  tip: { backgroundColor: '#0d2a22', borderRadius: 12, padding: 14, borderWidth: 2, borderColor: '#1db89640', flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  bigNum: { fontSize: 22, fontWeight: '800', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
+  editHint: { fontSize: 10, color: '#3C3C5C', letterSpacing: 0.5 },
+  cardName: { fontSize: 15, fontWeight: '700', color: '#fff', ...(FONT ? { fontFamily: FONT } : {}) },
+  cardBalance: { fontSize: 12, color: '#9090B8' },
+  addCard: { borderWidth: 1.5, borderColor: '#1C1C38', borderStyle: 'dashed', borderRadius: 20, padding: 16, alignItems: 'center' },
+  addCardText: { color: '#44446A', fontSize: 14, fontWeight: '600' },
+  tip: { backgroundColor: '#0C0C1E', borderRadius: 20, padding: 14, borderWidth: 1.5, borderColor: '#00E5A822', flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  tipTextBlock: { flex: 1 },
   tipIcon: { fontSize: 22, marginTop: 2 },
-  tipTitle: { fontSize: 14, fontWeight: '800', color: '#1db896' },
-  tipBody: { fontSize: 13, color: '#8ab8b8', lineHeight: 18, marginTop: 2 },
-  recBtn: { backgroundColor: '#1db896', borderRadius: 10, paddingVertical: 14, alignItems: 'center', borderWidth: 3, borderColor: '#16a07a' },
-  recBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 1 },
-  modalOverlay: { flex: 1, backgroundColor: '#000000bb', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#122222', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 12, borderTopWidth: 3, borderColor: '#FFE566' },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  input: { backgroundColor: '#1a3333', borderWidth: 2, borderColor: '#1e3d3d', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, color: '#fff', fontSize: 14 },
+  tipTitle: { fontSize: 14, fontWeight: '800', color: '#00E5A8', ...(FONT ? { fontFamily: FONT } : {}) },
+  tipBody: { fontSize: 13, color: '#9090B8', lineHeight: 18, marginTop: 2 },
+  recBtn: { backgroundColor: '#7B3FFF', borderRadius: 50, paddingVertical: 15, alignItems: 'center', borderWidth: 0 },
+  recBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.8, ...(FONT ? { fontFamily: FONT } : {}) },
+  modalOverlay: { flex: 1, backgroundColor: '#000000CC', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#0F0F24', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 12, borderTopWidth: 1.5, borderColor: '#FFD060' },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4, ...(FONT ? { fontFamily: FONT } : {}) },
+  input: { backgroundColor: '#15152C', borderWidth: 1.5, borderColor: '#1C1C38', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, color: '#fff', fontSize: 14 },
   modalRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  modalBtn: { flex: 1, backgroundColor: '#1db896', borderRadius: 8, paddingVertical: 13, alignItems: 'center', borderWidth: 2, borderColor: '#16a07a' },
-  modalBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  modalBtn: { flex: 1, backgroundColor: '#7B3FFF', borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
+  modalBtnCancel: { backgroundColor: '#15152C', borderWidth: 1.5, borderColor: '#1C1C38' },
+  modalBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', ...(FONT ? { fontFamily: FONT } : {}) },
 });
