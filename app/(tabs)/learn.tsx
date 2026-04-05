@@ -1,24 +1,40 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Platform, Linking } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Platform, Linking, TextInput, ActivityIndicator, Animated } from 'react-native';
+import Constants from 'expo-constants';
 import { useLocale, LifeStage } from '@/context/AppContext';
 
 const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 const FF = FONT ? { fontFamily: FONT } : {};
 
+const runtime = Constants as unknown as {
+  expoConfig?: { hostUri?: string };
+  expoGoConfig?: { debuggerHost?: string };
+  manifest?: { debuggerHost?: string };
+  manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
+};
+const hostUri =
+  runtime.expoGoConfig?.debuggerHost ??
+  runtime.manifest?.debuggerHost ??
+  runtime.expoConfig?.hostUri ??
+  runtime.manifest2?.extra?.expoClient?.hostUri;
+const host = hostUri?.split(':')[0];
+const fallbackApiBase = Platform.select({ ios: 'http://127.0.0.1:8000', android: 'http://10.0.2.2:8000', default: 'http://localhost:8000' });
+const API_BASE = host ? `http://${host}:8000` : fallbackApiBase;
+
 const C = {
-  bg:     '#F0F5FC',
-  card:   '#FFFFFF',
-  border: '#D6E8F5',
-  navy:   '#1B3B6F',
-  blue:   '#3B73B9',
-  gold:   '#C4991A',
-  text:   '#0E1E3D',
-  text2:  '#4B6080',
-  text3:  '#8FA7C0',
-  green:  '#1A7A56',
-  tintN:  '#EBF0FA',
-  tintG:  '#FDF7E6',
-  tintB:  '#EBF4FF',
+  bg:     '#EEF3FB',
+  card:   'rgba(255,255,255,0.95)',
+  border: 'rgba(190,210,235,0.6)',
+  navy:   '#162F5A',
+  blue:   '#2B6CB0',
+  gold:   '#E8A817',
+  text:   '#0A1628',
+  text2:  '#3D5575',
+  text3:  '#7A95B4',
+  green:  '#0E9A5E',
+  tintN:  'rgba(230,238,252,0.9)',
+  tintG:  'rgba(255,248,225,0.9)',
+  tintB:  'rgba(228,240,255,0.9)',
 };
 
 function LangToggle() {
@@ -70,6 +86,27 @@ const T = {
           { id: '4', emoji: '🏦', xp: 40, title: 'What is a savings account?', duration: '4 min', body: 'A savings account holds money at a bank and earns interest. High-yield savings accounts (HYSAs) offer 4–5% APY. Keep 3–6 months of expenses as an emergency fund in one.' },
         ],
       },
+      {
+        section: 'Know Your Rights', emoji: '⚖️',
+        items: [
+          { id: '5', emoji: '🛡️', xp: 60, title: 'Your financial rights', duration: '4 min', body: 'Regardless of immigration status, you have financial rights in the U.S. Banks cannot refuse you service based on nationality. FDIC insures your deposits up to $250,000. Debt collectors cannot threaten deportation. You can file complaints with the CFPB.' },
+          { id: '6', emoji: '🚨', xp: 50, title: 'Spotting scams & predatory loans', duration: '5 min', body: 'Watch for these red flags: "guaranteed approval" offers, upfront fees before a loan, pressure to sign immediately, check-cashing stores charging 3-5% fees, notarios claiming to be lawyers. Payday loans can charge 400%+ APR. Always compare with credit union alternatives.' },
+        ],
+      },
+      {
+        section: 'Family & Money', emoji: '👨‍👩‍👧‍👦',
+        items: [
+          { id: '7', emoji: '💬', xp: 50, title: 'Talking to family about money', duration: '4 min', body: 'Money talk is often taboo in Hispanic families, but it\'s essential for building wealth together. Start small: share one money win. Ask parents about their first job. Discuss remittance costs openly. Teach kids about saving with a clear jar — seeing money grow makes it real.' },
+          { id: '8', emoji: '🌳', xp: 75, title: 'Building generational wealth', duration: '5 min', body: 'Breaking the cycle starts with small steps. Investing $50/month in an index fund for 30 years at 10% average return grows to over $100,000. Open a custodial account for your kids. Your sacrifice today creates opportunities they\'ll never have to worry about.' },
+        ],
+      },
+      {
+        section: 'Success Stories', emoji: '⭐',
+        items: [
+          { id: '9', emoji: '🏠', xp: 40, title: 'From zero credit to homeowner', duration: '3 min', body: 'Maria arrived from Mexico with no credit history. She got a secured card with a $200 deposit, paid it off monthly, became an authorized user on her sister\'s card. In 2 years her score went from nothing to 720. She bought her first home at 31 with an FHA loan — 3.5% down.' },
+          { id: '10', emoji: '📈', xp: 40, title: 'First-gen investor success', duration: '3 min', body: 'Carlos was the first in his family to open a brokerage account. He started with $25/week into VOO. His parents thought investing was "for rich people." After 5 years, his portfolio hit $15,000. Now he helps his parents set up their retirement accounts.' },
+        ],
+      },
     ],
   },
   es: {
@@ -103,6 +140,27 @@ const T = {
         items: [
           { id: '3', emoji: '🚀', xp: 75, title: '¿Cómo empezar a invertir?', duration: '5 min', body: 'Comienza con el 401(k) de tu empleador si está disponible. Luego abre una Roth IRA. Los fondos indexados son de bajo costo y diversificados. El tiempo en el mercado supera al momento de entrar.' },
           { id: '4', emoji: '🏦', xp: 40, title: '¿Qué es una cuenta de ahorros?', duration: '4 min', body: 'Una cuenta de ahorros guarda dinero en un banco y genera intereses. Las cuentas de alto rendimiento (HYSA) ofrecen 4–5% APY. Guarda 3–6 meses de gastos como fondo de emergencia.' },
+        ],
+      },
+      {
+        section: 'Conoce Tus Derechos', emoji: '⚖️',
+        items: [
+          { id: '5', emoji: '🛡️', xp: 60, title: '¿Cuáles son tus derechos financieros?', duration: '4 min', body: 'Sin importar tu estatus migratorio, tienes derechos financieros en EE.UU. Los bancos no pueden negarte servicio por tu nacionalidad. La FDIC asegura tus depósitos hasta $250,000. Los cobradores de deudas no pueden amenazar con deportación. Puedes presentar quejas ante el CFPB.' },
+          { id: '6', emoji: '🚨', xp: 50, title: 'Cómo detectar estafas y préstamos abusivos', duration: '5 min', body: 'Cuidado con estas señales: ofertas de "aprobación garantizada", cobros antes de dar un préstamo, presión para firmar de inmediato, casas de cambio de cheques que cobran 3-5%, notarios que dicen ser abogados. Los préstamos de día de pago pueden cobrar más de 400% APR. Siempre compara con cooperativas de crédito.' },
+        ],
+      },
+      {
+        section: 'Familia y Dinero', emoji: '👨‍👩‍👧‍👦',
+        items: [
+          { id: '7', emoji: '💬', xp: 50, title: 'Hablar de dinero con la familia', duration: '4 min', body: 'Hablar de dinero suele ser tabú en las familias hispanas, pero es esencial para construir riqueza juntos. Empieza poco a poco: comparte un logro financiero. Pregúntale a tus padres sobre su primer trabajo. Hablen abiertamente sobre los costos de las remesas. Enséñales a los niños a ahorrar con un frasco transparente — ver crecer el dinero lo hace real.' },
+          { id: '8', emoji: '🌳', xp: 75, title: 'Construir riqueza generacional', duration: '5 min', body: 'Romper el ciclo empieza con pequeños pasos. Invertir $50/mes en un fondo indexado durante 30 años con un rendimiento promedio del 10% crece a más de $100,000. Abre una cuenta de custodia para tus hijos. Tu sacrificio de hoy crea oportunidades por las que ellos nunca tendrán que preocuparse.' },
+        ],
+      },
+      {
+        section: 'Historias de Éxito', emoji: '⭐',
+        items: [
+          { id: '9', emoji: '🏠', xp: 40, title: 'De cero crédito a dueño de casa', duration: '3 min', body: 'María llegó de México sin historial crediticio. Obtuvo una tarjeta asegurada con un depósito de $200, la pagó mensualmente y se convirtió en usuario autorizado de la tarjeta de su hermana. En 2 años su puntaje pasó de nada a 720. Compró su primera casa a los 31 con un préstamo FHA — 3.5% de enganche.' },
+          { id: '10', emoji: '📈', xp: 40, title: 'Éxito de un inversionista primera generación', duration: '3 min', body: 'Carlos fue el primero en su familia en abrir una cuenta de inversión. Empezó con $25/semana en VOO. Sus padres pensaban que invertir era "para ricos." Después de 5 años, su portafolio llegó a $15,000. Ahora ayuda a sus padres a configurar sus cuentas de retiro.' },
         ],
       },
     ],
@@ -161,9 +219,16 @@ const TYPE_BG: Record<Resource['type'], string> = { video: '#FDF7E6', site: '#EB
 
 type Status = 'done' | 'in-progress' | 'not-started';
 
-const STATUS_COLOR: Record<Status, string> = { done: '#1A7A56', 'in-progress': '#C4991A', 'not-started': '#8FA7C0' };
-const STATUS_BG: Record<Status, string> = { done: '#E8F5EF', 'in-progress': '#FDF7E6', 'not-started': '#F0F5FC' };
-const INITIAL: Record<string, Status> = { '1': 'done', '2': 'in-progress', '3': 'not-started', '4': 'not-started' };
+const STATUS_COLOR: Record<Status, string> = { done: '#0E9A5E', 'in-progress': '#E8A817', 'not-started': '#7A95B4' };
+const STATUS_BG: Record<Status, string> = { done: 'rgba(220,248,235,0.9)', 'in-progress': 'rgba(255,248,225,0.9)', 'not-started': 'rgba(230,238,252,0.9)' };
+const INITIAL: Record<string, Status> = { '1': 'done', '2': 'in-progress', '3': 'not-started', '4': 'not-started', '5': 'not-started', '6': 'not-started', '7': 'not-started', '8': 'not-started', '9': 'not-started', '10': 'not-started' };
+
+function FadeSlide({ index, scrollY, children }: { index: number; scrollY: Animated.Value; children: React.ReactNode }) {
+  const offset = 100 + index * 120;
+  const opacity = scrollY.interpolate({ inputRange: [offset - 300, offset - 200], outputRange: [0.6, 1], extrapolate: 'clamp' });
+  const translateY = scrollY.interpolate({ inputRange: [offset - 300, offset - 200], outputRange: [12, 0], extrapolate: 'clamp' });
+  return <Animated.View style={{ opacity, transform: [{ translateY }] }}>{children}</Animated.View>;
+}
 
 function XpDots({ pct }: { pct: number }) {
   const total = 10;
@@ -177,11 +242,18 @@ function XpDots({ pct }: { pct: number }) {
   );
 }
 
+type ChatMsg = { role: 'user' | 'assistant'; text: string };
+
 export default function LearnScreen() {
   const { locale, lifeStage } = useLocale();
   const t = T[locale];
+  const scrollY = useRef(new Animated.Value(0)).current;
+  let ci = 0;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, Status>>(INITIAL);
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   const allItems = t.sections.flatMap(sec => sec.items);
   const selected = selectedId ? allItems.find(i => i.id === selectedId) ?? null : null;
@@ -193,6 +265,36 @@ export default function LearnScreen() {
     });
   }
 
+  function openLesson(id: string) {
+    setSelectedId(id);
+    setChatMessages([]);
+    setChatInput('');
+  }
+
+  async function askLana() {
+    if (!chatInput.trim() || !selected) return;
+    const question = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', text: question }]);
+    setChatLoading(true);
+    try {
+      const systemCtx = locale === 'en'
+        ? `The user is learning about "${selected.title}". Context: ${selected.body}. Answer their follow-up question clearly and concisely in English. Keep it 2-3 sentences max.`
+        : `El usuario está aprendiendo sobre "${selected.title}". Contexto: ${selected.body}. Responde su pregunta de seguimiento de forma clara y concisa en español. Máximo 2-3 oraciones.`;
+      const res = await fetch(`${API_BASE}/chat/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `${systemCtx}\n\nUser question: ${question}`, locale, life_stage: lifeStage }),
+      });
+      const data = await res.json();
+      setChatMessages(prev => [...prev, { role: 'assistant', text: data.reply ?? data.response ?? 'No response.' }]);
+    } catch {
+      setChatMessages(prev => [...prev, { role: 'assistant', text: locale === 'en' ? 'Could not reach Lana right now.' : 'No se pudo conectar con Lana.' }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
   const doneCount = Object.values(statuses).filter(s => s === 'done').length;
   const total = allItems.length;
   const xpTotal = doneCount * 50;
@@ -200,7 +302,12 @@ export default function LearnScreen() {
 
   return (
     <View style={s.root}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        scrollEventThrottle={16}
+      >
 
         <View style={s.header}>
           <View>
@@ -211,95 +318,106 @@ export default function LearnScreen() {
         </View>
 
         {/* XP Card */}
-        <View style={s.xpCard}>
-          <View>
-            <Text style={s.xpLabel}>{t.xpLabel}</Text>
-            <Text style={s.xpNum}>{xpTotal} <Text style={s.xpUnit}>{t.pts}</Text></Text>
-            <Text style={s.xpSub}>{doneCount}/{total} {t.lessons}</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end', gap: 8 }}>
-            <XpDots pct={(doneCount / total) * 100} />
-            <View style={s.levelBadge}>
-              <Text style={s.levelText}>LVL {Math.floor(doneCount / 2) + 1}</Text>
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <View style={s.xpCard}>
+            <View>
+              <Text style={s.xpLabel}>{t.xpLabel}</Text>
+              <Text style={s.xpNum}>{xpTotal} <Text style={s.xpUnit}>{t.pts}</Text></Text>
+              <Text style={s.xpSub}>{doneCount}/{total} {t.lessons}</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 8 }}>
+              <XpDots pct={(doneCount / total) * 100} />
+              <View style={s.levelBadge}>
+                <Text style={s.levelText}>LVL {Math.floor(doneCount / 2) + 1}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        </FadeSlide>
 
-        {t.sections.map(section => (
+        {t.sections.map((section) => (
           <View key={section.section}>
-            <View style={s.sectionHeader}>
-              <Text style={s.sectionEmoji}>{section.emoji}</Text>
-              <Text style={s.sectionLabel}>{section.section}</Text>
-              <View style={s.sectionLine} />
-            </View>
+            <FadeSlide index={ci++} scrollY={scrollY}>
+              <View style={s.sectionHeader}>
+                <Text style={s.sectionEmoji}>{section.emoji}</Text>
+                <Text style={s.sectionLabel}>{section.section}</Text>
+                <View style={s.sectionLine} />
+              </View>
+            </FadeSlide>
             {section.items.map(lesson => {
               const status = statuses[lesson.id];
               const fillPct = status === 'done' ? 100 : status === 'in-progress' ? 50 : 0;
               return (
-                <TouchableOpacity
-                  key={lesson.id}
-                  style={[s.lessonCard, { backgroundColor: STATUS_BG[status], borderLeftColor: STATUS_COLOR[status] }]}
-                  onPress={() => setSelectedId(lesson.id)}
-                  activeOpacity={0.75}
-                >
-                  <View style={[s.lessonIcon, { backgroundColor: STATUS_COLOR[status] + '22' }]}>
-                    <Text style={{ fontSize: 22 }}>{lesson.emoji}</Text>
-                  </View>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={s.lessonTitle}>{lesson.title}</Text>
-                    <Text style={[s.statusText, { color: STATUS_COLOR[status] }]}>
-                      {statusLabel[status]}{status === 'done' ? `  ·  ${lesson.xp} xp` : ''}{status !== 'done' && lesson.duration ? `  ·  ${lesson.duration}` : ''}
-                    </Text>
-                    <View style={s.barTrack}>
-                      <View style={[s.barFill, { width: `${fillPct}%`, backgroundColor: STATUS_COLOR[status] }]} />
+                <FadeSlide key={lesson.id} index={ci++} scrollY={scrollY}>
+                  <TouchableOpacity
+                    style={[s.lessonCard, { backgroundColor: STATUS_BG[status], borderLeftColor: STATUS_COLOR[status] }]}
+                    onPress={() => openLesson(lesson.id)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[s.lessonIcon, { backgroundColor: STATUS_COLOR[status] + '22' }]}>
+                      <Text style={{ fontSize: 22 }}>{lesson.emoji}</Text>
                     </View>
-                  </View>
-                  <Text style={s.chevron}>›</Text>
-                </TouchableOpacity>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={s.lessonTitle}>{lesson.title}</Text>
+                      <Text style={[s.statusText, { color: STATUS_COLOR[status] }]}>
+                        {statusLabel[status]}{status === 'done' ? `  ·  ${lesson.xp} xp` : ''}{status !== 'done' && lesson.duration ? `  ·  ${lesson.duration}` : ''}
+                      </Text>
+                      <View style={s.barTrack}>
+                        <View style={[s.barFill, { width: `${fillPct}%`, backgroundColor: STATUS_COLOR[status] }]} />
+                      </View>
+                    </View>
+                    <Text style={s.chevron}>›</Text>
+                  </TouchableOpacity>
+                </FadeSlide>
               );
             })}
           </View>
         ))}
 
-        <View style={s.footerBadge}>
-          <Text style={s.footerText}>{t.footer}</Text>
-        </View>
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <View style={s.footerBadge}>
+            <Text style={s.footerText}>{t.footer}</Text>
+          </View>
+        </FadeSlide>
 
         {/* Curated Resources */}
-        <View style={s.sectionHeader}>
-          <Text style={s.sectionEmoji}>🔗</Text>
-          <Text style={s.sectionLabel}>{t.resourcesLabel}</Text>
-          <View style={s.sectionLine} />
-        </View>
-        <View style={s.resourcesCard}>
-          <Text style={s.resourcesTitle}>{t.resourcesTitle}</Text>
-          <Text style={s.resourcesSub}>{t.resourcesSub}</Text>
-          {RESOURCES[lifeStage][locale].map((res, i) => (
-            <TouchableOpacity
-              key={res.id}
-              style={[s.resourceRow, i < RESOURCES[lifeStage][locale].length - 1 && s.resourceBorder]}
-              onPress={() => Linking.openURL(res.url)}
-              activeOpacity={0.7}
-            >
-              <View style={[s.resourceIconBox, { backgroundColor: TYPE_BG[res.type] }]}>
-                <Text style={{ fontSize: 20 }}>{res.emoji}</Text>
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <Text style={s.resourceTitle}>{res.title}</Text>
-                  <View style={[s.typeBadge, { backgroundColor: TYPE_BG[res.type] }]}>
-                    <Text style={[s.typeText, { color: TYPE_COLOR[res.type] }]}>{res.type.toUpperCase()}</Text>
-                  </View>
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionEmoji}>🔗</Text>
+            <Text style={s.sectionLabel}>{t.resourcesLabel}</Text>
+            <View style={s.sectionLine} />
+          </View>
+        </FadeSlide>
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <View style={s.resourcesCard}>
+            <Text style={s.resourcesTitle}>{t.resourcesTitle}</Text>
+            <Text style={s.resourcesSub}>{t.resourcesSub}</Text>
+            {RESOURCES[lifeStage][locale].map((res, i) => (
+              <TouchableOpacity
+                key={res.id}
+                style={[s.resourceRow, i < RESOURCES[lifeStage][locale].length - 1 && s.resourceBorder]}
+                onPress={() => Linking.openURL(res.url)}
+                activeOpacity={0.7}
+              >
+                <View style={[s.resourceIconBox, { backgroundColor: TYPE_BG[res.type] }]}>
+                  <Text style={{ fontSize: 20 }}>{res.emoji}</Text>
                 </View>
-                <Text style={s.resourceDesc}>{res.desc}</Text>
-              </View>
-              <Text style={[s.resourceBtn, { color: TYPE_COLOR[res.type] }]}>
-                {res.type === 'video' ? t.watchBtn : t.visitBtn}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={s.resourceTitle}>{res.title}</Text>
+                    <View style={[s.typeBadge, { backgroundColor: TYPE_BG[res.type] }]}>
+                      <Text style={[s.typeText, { color: TYPE_COLOR[res.type] }]}>{res.type.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  <Text style={s.resourceDesc}>{res.desc}</Text>
+                </View>
+                <Text style={[s.resourceBtn, { color: TYPE_COLOR[res.type] }]}>
+                  {res.type === 'video' ? t.watchBtn : t.visitBtn}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </FadeSlide>
+      </Animated.ScrollView>
 
       <Modal visible={!!selected} transparent animationType="slide" onRequestClose={() => setSelectedId(null)}>
         <View style={s.overlay}>
@@ -314,6 +432,39 @@ export default function LearnScreen() {
                   <Text style={s.xpBadgeText}>+{selected.xp} XP</Text>
                 </View>
                 <Text style={s.modalBody}>{selected.body}</Text>
+
+                {/* AI Chat */}
+                {chatMessages.length > 0 && (
+                  <ScrollView style={s.chatScroll} showsVerticalScrollIndicator={false}>
+                    {chatMessages.map((msg, i) => (
+                      <View key={i} style={msg.role === 'user' ? s.chatUser : s.chatAssistant}>
+                        <Text style={msg.role === 'user' ? s.chatUserText : s.chatAssistantText}>{msg.text}</Text>
+                      </View>
+                    ))}
+                    {chatLoading && (
+                      <View style={s.chatAssistant}>
+                        <ActivityIndicator size="small" color={C.gold} />
+                      </View>
+                    )}
+                  </ScrollView>
+                )}
+
+                <View style={s.chatInputRow}>
+                  <TextInput
+                    style={s.chatInput}
+                    value={chatInput}
+                    onChangeText={setChatInput}
+                    placeholder={locale === 'en' ? 'Ask Lana a question...' : 'Pregúntale a Lana...'}
+                    placeholderTextColor={C.text3}
+                    onSubmitEditing={askLana}
+                    returnKeyType="send"
+                    editable={!chatLoading}
+                  />
+                  <TouchableOpacity style={[s.chatSendBtn, chatLoading && { opacity: 0.4 }]} onPress={askLana} disabled={chatLoading}>
+                    <Text style={s.chatSendText}>▶</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
                   <TouchableOpacity style={s.cancelBtn} onPress={() => setSelectedId(null)}>
                     <Text style={s.cancelText}>{t.close}</Text>
@@ -334,7 +485,7 @@ export default function LearnScreen() {
 }
 
 const lt = StyleSheet.create({
-  wrap: { flexDirection: 'row', backgroundColor: C.tintN, borderRadius: 20, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  wrap: { flexDirection: 'row', backgroundColor: 'rgba(235,240,250,0.85)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,216,235,0.7)', overflow: 'hidden' },
   btn: { paddingHorizontal: 12, paddingVertical: 6 },
   active: { backgroundColor: C.navy },
   divider: { width: 1, backgroundColor: C.border },
@@ -344,23 +495,23 @@ const lt = StyleSheet.create({
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 14 },
+  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 110, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 4 },
-  eyebrow: { fontSize: 10, color: C.blue, fontWeight: '700', letterSpacing: 2, ...FF },
-  pageTitle: { fontSize: 28, fontWeight: '800', color: C.text, marginTop: 2, ...FF },
-  xpCard: { backgroundColor: C.card, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.border, borderTopWidth: 3, borderTopColor: C.gold, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10 }, android: { elevation: 2 } }) },
+  eyebrow: { fontSize: 11, color: C.blue, fontWeight: '600', letterSpacing: 3, opacity: 0.7, ...FF },
+  pageTitle: { fontSize: 34, fontWeight: '200', color: C.text, marginTop: 2, letterSpacing: -0.5, ...FF },
+  xpCard: { backgroundColor: C.card, borderRadius: 24, padding: 18, borderWidth: 1, borderColor: C.border, borderTopWidth: 2, borderTopColor: C.gold, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 16 }, android: { elevation: 2 } }) },
   xpLabel: { fontSize: 10, color: C.blue, fontWeight: '700', letterSpacing: 1.5, ...FF },
-  xpNum: { fontSize: 36, fontWeight: '800', color: C.gold, ...FF },
+  xpNum: { fontSize: 42, fontWeight: '200', color: C.gold, ...FF },
   xpUnit: { fontSize: 16, color: C.text2, fontWeight: '400' },
   xpSub: { fontSize: 12, color: C.text3, marginTop: 2 },
   levelBadge: { backgroundColor: C.navy, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 4 },
   levelText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 1, ...FF },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 10 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 10, backgroundColor: 'rgba(27,59,111,0.06)', borderRadius: 50, paddingHorizontal: 16, paddingVertical: 6, alignSelf: 'flex-start' },
   sectionEmoji: { fontSize: 15 },
   sectionLabel: { fontSize: 12, color: C.text2, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', ...FF },
-  sectionLine: { flex: 1, height: 1, backgroundColor: C.border },
-  lessonCard: { borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.border, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10, ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6 }, android: { elevation: 1 } }) },
-  lessonIcon: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  sectionLine: { flex: 1, height: 0, backgroundColor: C.border },
+  lessonCard: { borderRadius: 20, padding: 14, borderWidth: 1, borderColor: C.border, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10, ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 12 }, android: { elevation: 1 } }) },
+  lessonIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   lessonTitle: { fontSize: 14, fontWeight: '700', color: C.text, ...FF },
   statusText: { fontSize: 11, fontWeight: '600' },
   barTrack: { width: '100%', height: 4, backgroundColor: C.border, borderRadius: 4, overflow: 'hidden', marginTop: 2 },
@@ -368,8 +519,8 @@ const s = StyleSheet.create({
   chevron: { fontSize: 22, color: C.text3, fontWeight: '300' },
   footerBadge: { alignSelf: 'center', borderWidth: 1.5, borderColor: C.gold, borderRadius: 50, paddingHorizontal: 22, paddingVertical: 9, marginTop: 4 },
   footerText: { color: C.gold, fontSize: 12, fontWeight: '800', letterSpacing: 2, ...FF },
-  overlay: { flex: 1, backgroundColor: '#0E1E3D99', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 14, borderTopWidth: 3, borderColor: C.gold },
+  overlay: { flex: 1, backgroundColor: 'rgba(14,30,61,0.5)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 14, borderTopWidth: 2, borderColor: C.gold },
   xpBadge: { alignSelf: 'flex-start', backgroundColor: C.tintG, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 5, borderWidth: 1, borderColor: C.gold + '66' },
   xpBadgeText: { color: C.gold, fontSize: 13, fontWeight: '800', ...FF },
   modalBody: { fontSize: 14, color: C.text2, lineHeight: 22 },
@@ -377,15 +528,24 @@ const s = StyleSheet.create({
   cancelText: { color: C.text2, fontSize: 14, fontWeight: '700', ...FF },
   primaryBtn: { flex: 1, backgroundColor: C.navy, borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
   primaryText: { color: '#fff', fontSize: 14, fontWeight: '700', ...FF },
-  resourcesCard: { backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, overflow: 'hidden', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 4, ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10 }, android: { elevation: 2 } }) },
+  resourcesCard: { backgroundColor: C.card, borderRadius: 22, borderWidth: 1, borderColor: C.border, overflow: 'hidden', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 4, ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 16 }, android: { elevation: 2 } }) },
   resourcesTitle: { fontSize: 17, fontWeight: '800', color: C.text, ...FF },
   resourcesSub: { fontSize: 11, color: C.text3, marginTop: 2, marginBottom: 12 },
   resourceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   resourceBorder: { borderBottomWidth: 1, borderBottomColor: C.border },
-  resourceIconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  resourceIconBox: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   resourceTitle: { fontSize: 13, fontWeight: '700', color: C.text, flexShrink: 1, ...FF },
   typeBadge: { borderRadius: 50, paddingHorizontal: 8, paddingVertical: 2 },
   typeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
   resourceDesc: { fontSize: 11, color: C.text3, lineHeight: 16 },
   resourceBtn: { fontSize: 12, fontWeight: '700', flexShrink: 0, ...FF },
+  chatScroll: { maxHeight: 200, marginTop: 4 },
+  chatUser: { alignSelf: 'flex-end', backgroundColor: C.navy, borderRadius: 16, borderBottomRightRadius: 4, padding: 10, maxWidth: '80%', marginBottom: 6 },
+  chatUserText: { color: '#fff', fontSize: 13, lineHeight: 19 },
+  chatAssistant: { alignSelf: 'flex-start', backgroundColor: C.tintN, borderRadius: 16, borderBottomLeftRadius: 4, padding: 10, maxWidth: '80%', marginBottom: 6 },
+  chatAssistantText: { color: C.text, fontSize: 13, lineHeight: 19 },
+  chatInputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 6 },
+  chatInput: { flex: 1, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 50, paddingHorizontal: 16, paddingVertical: 10, color: C.text, fontSize: 13, ...FF },
+  chatSendBtn: { width: 38, height: 38, backgroundColor: C.navy, borderRadius: 50, alignItems: 'center', justifyContent: 'center' },
+  chatSendText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 });

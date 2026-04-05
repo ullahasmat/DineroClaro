@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useLocale } from '@/context/AppContext';
+import { isVoiceAvailable, startListening, stopListening } from '@/services/speech';
 
 const runtime = Constants as unknown as {
   expoConfig?: { hostUri?: string };
@@ -25,17 +26,18 @@ const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 const FF = FONT ? { fontFamily: FONT } : {};
 
 const C = {
-  bg:     '#F0F5FC',
-  card:   '#FFFFFF',
-  border: '#D6E8F5',
-  navy:   '#1B3B6F',
-  blue:   '#3B73B9',
-  gold:   '#C4991A',
-  text:   '#0E1E3D',
-  text2:  '#4B6080',
-  text3:  '#8FA7C0',
-  tintN:  '#EBF0FA',
-  tintB:  '#EBF4FF',
+  bg:     '#EEF3FB',
+  card:   'rgba(255,255,255,0.95)',
+  border: 'rgba(190,210,235,0.6)',
+  navy:   '#162F5A',
+  blue:   '#2B6CB0',
+  gold:   '#E8A817',
+  text:   '#0A1628',
+  text2:  '#3D5575',
+  text3:  '#7A95B4',
+  red:    '#E04040',
+  tintN:  'rgba(230,238,252,0.9)',
+  tintB:  'rgba(228,240,255,0.9)',
 };
 
 const T = {
@@ -46,10 +48,12 @@ const T = {
     placeholder: 'Ask Lana something...',
     errorMsg: 'Error talking to server.',
     suggestions: [
-      '💳  Best bank for me?',
-      '✈️  Send money abroad',
-      '📈  Build credit fast',
-      '❓  What is APR?',
+      '💳  Build my credit',
+      '✈️  Send money home cheap',
+      '🏛️  File taxes with ITIN',
+      '🚨  Is this a scam?',
+      '📄  Explain a document',
+      '🏠  How to buy a house',
     ],
   },
   es: {
@@ -59,10 +63,12 @@ const T = {
     placeholder: 'Pregúntale a Lana...',
     errorMsg: 'Error al contactar el servidor.',
     suggestions: [
-      '💳  ¿Mejor banco para mí?',
-      '✈️  Enviar dinero al exterior',
-      '📈  Mejorar mi crédito rápido',
-      '❓  ¿Qué es el APR?',
+      '💳  Construir mi crédito',
+      '✈️  Enviar dinero barato',
+      '🏛️  Declarar con ITIN',
+      '🚨  ¿Es una estafa?',
+      '📄  Explicar un documento',
+      '🏠  Cómo comprar casa',
     ],
   },
 };
@@ -91,7 +97,23 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
   const listRef = useRef<FlatList>(null);
+  const voiceEnabled = isVoiceAvailable();
+
+  function toggleVoice() {
+    if (listening) {
+      stopListening();
+      setListening(false);
+    } else {
+      setListening(true);
+      startListening(locale, {
+        onResult: (text) => setInput(prev => prev ? prev + ' ' + text : text),
+        onEnd: () => setListening(false),
+        onError: () => setListening(false),
+      });
+    }
+  }
 
   async function send(text?: string) {
     const display = text ?? input;
@@ -219,6 +241,11 @@ export default function ChatScreen() {
           returnKeyType="send"
           editable={!loading}
         />
+        {voiceEnabled && (
+          <TouchableOpacity style={[s.micBtn, listening && s.micBtnActive]} onPress={toggleVoice} activeOpacity={0.7}>
+            <Text style={s.micIcon}>{listening ? '⏹' : '🎙'}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={[s.sendBtn, loading && { opacity: 0.4 }]} onPress={() => send()} disabled={loading}>
           <Text style={s.sendIcon}>▶</Text>
         </TouchableOpacity>
@@ -228,7 +255,7 @@ export default function ChatScreen() {
 }
 
 const lt = StyleSheet.create({
-  wrap: { flexDirection: 'row', backgroundColor: C.tintN, borderRadius: 20, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  wrap: { flexDirection: 'row', backgroundColor: 'rgba(235,240,250,0.85)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,216,235,0.7)', overflow: 'hidden' },
   btn: { paddingHorizontal: 12, paddingVertical: 6 },
   active: { backgroundColor: C.navy },
   divider: { width: 1, backgroundColor: C.border },
@@ -248,32 +275,32 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 }, android: { elevation: 2 } }),
+    ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12 }, android: { elevation: 2 } }),
   },
   avatarWrap: { position: 'relative' },
-  avatar: { width: 46, height: 46, borderRadius: 14, backgroundColor: C.tintN, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
+  avatar: { width: 46, height: 46, borderRadius: 18, backgroundColor: C.tintN, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
   avatarEmoji: { fontSize: 24 },
-  online: { position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: '#1A7A56', borderWidth: 2, borderColor: C.card },
-  eyebrow: { fontSize: 9, color: C.blue, fontWeight: '700', letterSpacing: 2, ...FF },
-  title: { fontSize: 20, fontWeight: '800', color: C.text, ...FF },
+  online: { position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: '#1A7A56', borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)' },
+  eyebrow: { fontSize: 10, color: C.blue, fontWeight: '600', letterSpacing: 3, opacity: 0.7, ...FF },
+  title: { fontSize: 22, fontWeight: '200', color: C.text, ...FF },
   list: { flex: 1, backgroundColor: C.bg },
   listContent: { padding: 16, gap: 10, flexGrow: 1 },
   emptyWrap: { alignItems: 'center', marginTop: 48, gap: 8 },
   emptyEmoji: { fontSize: 44 },
-  emptyHint: { color: C.text2, fontSize: 15, fontWeight: '600', ...FF },
-  emptyHint2: { color: C.text3, fontSize: 12, letterSpacing: 0.5 },
+  emptyHint: { color: C.text2, fontSize: 15, fontWeight: '500', ...FF },
+  emptyHint2: { color: C.text3, fontSize: 12, fontWeight: '400', letterSpacing: 0.5 },
   bubbleWrap: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginVertical: 2 },
   left: { justifyContent: 'flex-start' },
   right: { justifyContent: 'flex-end' },
   lBadge: { width: 26, height: 26, borderRadius: 8, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   lBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800', ...FF },
-  userBubble: { backgroundColor: C.navy, borderRadius: 20, borderBottomRightRadius: 5, padding: 12, maxWidth: '78%' },
-  aiBubble: { backgroundColor: C.card, borderRadius: 20, borderBottomLeftRadius: 5, padding: 12, maxWidth: '78%', borderWidth: 1, borderColor: C.border },
+  userBubble: { backgroundColor: C.navy, borderRadius: 22, borderBottomRightRadius: 6, padding: 12, maxWidth: '78%' },
+  aiBubble: { backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 22, borderBottomLeftRadius: 6, padding: 12, maxWidth: '78%', borderWidth: 1, borderColor: 'rgba(200,216,235,0.7)' },
   userText: { color: '#fff', fontSize: 14, lineHeight: 20, fontWeight: '500' },
   aiText: { color: C.text, fontSize: 14, lineHeight: 20 },
-  suggestions: { backgroundColor: C.card, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, borderTopWidth: 1, borderColor: C.border },
+  suggestions: { backgroundColor: 'rgba(255,255,255,0.85)', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, borderTopWidth: 1, borderColor: C.border },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  chipBorder: { borderBottomWidth: 1, borderBottomColor: C.border },
+  chipBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(200,216,235,0.7)' },
   chipEmoji: { fontSize: 16, width: 24, textAlign: 'center' },
   chipText: { color: C.text2, fontSize: 13, fontWeight: '500', ...FF },
   inputRow: {
@@ -283,11 +310,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 88 : 80,
-    backgroundColor: C.card,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     borderTopWidth: 1,
-    borderColor: C.border,
+    borderColor: 'rgba(200,216,235,0.7)',
   },
-  input: { flex: 1, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 50, paddingHorizontal: 18, paddingVertical: 12, color: C.text, fontSize: 14, ...FF },
+  input: { flex: 1, backgroundColor: C.bg, borderWidth: 1, borderColor: 'rgba(200,216,235,0.7)', borderRadius: 50, paddingHorizontal: 18, paddingVertical: 12, color: C.text, fontSize: 14, ...FF },
+  micBtn: { width: 42, height: 42, borderRadius: 50, backgroundColor: C.tintN, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  micBtnActive: { backgroundColor: C.red, borderColor: C.red },
+  micIcon: { fontSize: 18 },
   sendBtn: { width: 46, height: 46, backgroundColor: C.navy, borderRadius: 50, alignItems: 'center', justifyContent: 'center' },
   sendIcon: { color: '#fff', fontSize: 14, fontWeight: '800' },
 });

@@ -7,25 +7,25 @@ const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 const FF = FONT ? { fontFamily: FONT } : {};
 
 const C = {
-  bg:     '#F0F5FC',
-  card:   '#FFFFFF',
-  border: '#D6E8F5',
-  navy:   '#1B3B6F',
-  blue:   '#3B73B9',
-  gold:   '#C4991A',
-  text:   '#0E1E3D',
-  text2:  '#4B6080',
-  text3:  '#8FA7C0',
-  green:  '#1A7A56',
-  tintN:  '#EBF0FA',
-  tintG:  '#FDF7E6',
-  tintB:  '#EBF4FF',
+  bg:     '#EEF3FB',
+  card:   'rgba(255,255,255,0.95)',
+  border: 'rgba(190,210,235,0.6)',
+  navy:   '#162F5A',
+  blue:   '#2B6CB0',
+  gold:   '#E8A817',
+  text:   '#0A1628',
+  text2:  '#3D5575',
+  text3:  '#7A95B4',
+  green:  '#0E9A5E',
+  tintN:  'rgba(230,238,252,0.9)',
+  tintG:  'rgba(255,248,225,0.9)',
+  tintB:  'rgba(228,240,255,0.9)',
 };
 
 const STAGE_COLORS: Record<LifeStage, string> = {
-  'new-arrival':  '#1A7A56',
-  'first-gen':    '#3B73B9',
-  'established':  '#C4991A',
+  'new-arrival':  '#0E9A5E',
+  'first-gen':    '#2B6CB0',
+  'established':  '#E8A817',
 };
 const STAGE_BG: Record<LifeStage, string> = {
   'new-arrival':  '#E8F5EF',
@@ -63,6 +63,14 @@ const T = {
     email: 'Email', password: 'Password',
     loggedInAs: 'Logged in as', notLoggedIn: 'Not logged in',
     passwordUpdated: 'Password updated ✓',
+    anonymousMode: 'Anonymous Mode',
+    anonymousDesc: 'No login required. All data stays on your device only.',
+    anonymousOn: 'ON — Your data is private',
+    anonymousOff: 'OFF — Data may sync to cloud',
+    signUp: 'Sign Up',
+    noAccount: "Don't have an account? Sign up",
+    hasAccount: 'Already have an account? Log in',
+    authError: 'Error',
   },
   es: {
     eyebrow: 'TU PERFIL',
@@ -88,6 +96,14 @@ const T = {
     email: 'Correo electrónico', password: 'Contraseña',
     loggedInAs: 'Sesión iniciada como', notLoggedIn: 'Sin sesión activa',
     passwordUpdated: 'Contraseña actualizada ✓',
+    anonymousMode: 'Modo Anónimo',
+    anonymousDesc: 'Sin inicio de sesión. Todos los datos se quedan en tu dispositivo.',
+    anonymousOn: 'ON — Tus datos son privados',
+    anonymousOff: 'OFF — Los datos pueden sincronizarse',
+    signUp: 'Registrarse',
+    noAccount: '¿No tienes cuenta? Regístrate',
+    hasAccount: '¿Ya tienes cuenta? Inicia sesión',
+    authError: 'Error',
   },
 };
 
@@ -108,9 +124,8 @@ function LangToggle() {
 
 function SectionLabel({ label }: { label: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 6 }}>
+    <View style={{ backgroundColor: 'rgba(27,59,111,0.06)', borderRadius: 50, paddingHorizontal: 16, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 8, marginBottom: 6 }}>
       <Text style={{ fontSize: 11, color: C.text3, fontWeight: '700', letterSpacing: 1.5, ...FF }}>{label}</Text>
-      <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
     </View>
   );
 }
@@ -130,10 +145,11 @@ function SettingRow({ icon, label, value, onPress, danger }: { icon: string; lab
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { locale, lifeStage, setUserProfile } = useLocale();
+  const { locale, lifeStage, setUserProfile, session, signUp, signIn, signOut } = useLocale();
   const t = T[locale];
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = !!session;
+  const [anonymousMode, setAnonymousMode] = useState(true);
   const [user, setUser] = useState({ name: '', age: '', area: '', email: '' });
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -142,22 +158,39 @@ export default function ProfileScreen() {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
   const [pwSaved, setPwSaved] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
   const stageColor = STAGE_COLORS[lifeStage];
   const stageBg    = STAGE_BG[lifeStage];
-  const displayName = user.name || (isLoggedIn ? user.email.split('@')[0] : t.guest);
+  const displayName = user.name || (isLoggedIn ? (session?.user?.email?.split('@')[0] ?? t.guest) : t.guest);
 
   function savePersonalInfo() {
     setUser(u => ({ ...u, ...editUser }));
     setUserProfile({ name: editUser.name, age: editUser.age, area: editUser.area });
     setShowPersonalInfo(false);
   }
-  function doLogin() {
-    if (!loginForm.email.trim()) return;
-    setUser(u => ({ ...u, email: loginForm.email }));
-    setIsLoggedIn(true);
-    setLoginForm({ email: '', password: '' });
-    setShowLogin(false);
+  async function doAuth() {
+    if (!loginForm.email.trim() || !loginForm.password.trim()) return;
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const error = isSignUp
+        ? await signUp(loginForm.email.trim(), loginForm.password)
+        : await signIn(loginForm.email.trim(), loginForm.password);
+      if (error) {
+        setAuthError(error);
+      } else {
+        setLoginForm({ email: '', password: '' });
+        setShowLogin(false);
+        setIsSignUp(false);
+      }
+    } catch (e: any) {
+      setAuthError(e?.message ?? 'Unknown error');
+    } finally {
+      setAuthLoading(false);
+    }
   }
   function savePassword() {
     setPwSaved(true);
@@ -212,10 +245,21 @@ export default function ProfileScreen() {
           <SettingRow
             icon={isLoggedIn ? '🚪' : '🔐'}
             label={isLoggedIn ? t.logOut : t.logIn}
-            value={isLoggedIn ? `${t.loggedInAs} ${user.email || displayName}` : t.notLoggedIn}
-            onPress={() => { if (isLoggedIn) { setIsLoggedIn(false); setUser({ name: '', age: '', area: '', email: '' }); } else setShowLogin(true); }}
+            value={isLoggedIn ? `${t.loggedInAs} ${session?.user?.email ?? displayName}` : t.notLoggedIn}
+            onPress={() => { if (isLoggedIn) { signOut(); } else { setAuthError(''); setIsSignUp(false); setShowLogin(true); } }}
             danger={isLoggedIn}
           />
+          <View style={s.divider} />
+          <TouchableOpacity style={s.anonRow} onPress={() => setAnonymousMode(!anonymousMode)} activeOpacity={0.7}>
+            <Text style={s.anonIcon}>🔒</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.anonLabel}>{t.anonymousMode}</Text>
+              <Text style={s.anonDesc}>{t.anonymousDesc}</Text>
+            </View>
+            <View style={[s.anonToggle, anonymousMode && s.anonToggleOn]}>
+              <View style={[s.anonDot, anonymousMode && s.anonDotOn]} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Footer */}
@@ -264,18 +308,24 @@ export default function ProfileScreen() {
         </View></View>
       </Modal>
 
-      {/* Login Modal */}
+      {/* Login / Sign Up Modal */}
       <Modal visible={showLogin} transparent animationType="slide" onRequestClose={() => setShowLogin(false)}>
         <View style={m.overlay}><View style={m.card}>
-          <Text style={m.title}>🔐  {t.logIn}</Text>
+          <Text style={m.title}>🔐  {isSignUp ? t.signUp : t.logIn}</Text>
+          {authError ? <Text style={{ color: '#D32F2F', fontSize: 13, fontWeight: '600', marginBottom: 4, ...FF }}>{t.authError}: {authError}</Text> : null}
           <Text style={m.label}>{t.email}</Text>
           <TextInput style={m.input} value={loginForm.email} onChangeText={v => setLoginForm(f => ({ ...f, email: v }))} placeholder="you@email.com" placeholderTextColor={C.text3} keyboardType="email-address" autoCapitalize="none" />
           <Text style={m.label}>{t.password}</Text>
           <TextInput style={m.input} value={loginForm.password} onChangeText={v => setLoginForm(f => ({ ...f, password: v }))} placeholder="••••••••" placeholderTextColor={C.text3} secureTextEntry />
           <View style={m.row}>
-            <TouchableOpacity style={m.cancelBtn} onPress={() => setShowLogin(false)}><Text style={m.cancelText}>{t.cancel}</Text></TouchableOpacity>
-            <TouchableOpacity style={m.saveBtn} onPress={doLogin}><Text style={m.saveText}>{t.logIn}</Text></TouchableOpacity>
+            <TouchableOpacity style={m.cancelBtn} onPress={() => { setShowLogin(false); setAuthError(''); }}><Text style={m.cancelText}>{t.cancel}</Text></TouchableOpacity>
+            <TouchableOpacity style={[m.saveBtn, authLoading && { opacity: 0.6 }]} onPress={doAuth} disabled={authLoading}>
+              <Text style={m.saveText}>{isSignUp ? t.signUp : t.logIn}</Text>
+            </TouchableOpacity>
           </View>
+          <TouchableOpacity onPress={() => { setIsSignUp(!isSignUp); setAuthError(''); }} style={{ alignItems: 'center', marginTop: 8 }}>
+            <Text style={{ color: C.blue, fontSize: 13, fontWeight: '600', ...FF }}>{isSignUp ? t.hasAccount : t.noAccount}</Text>
+          </TouchableOpacity>
         </View></View>
       </Modal>
     </View>
@@ -283,7 +333,7 @@ export default function ProfileScreen() {
 }
 
 const lt = StyleSheet.create({
-  wrap: { flexDirection: 'row', backgroundColor: C.tintN, borderRadius: 20, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  wrap: { flexDirection: 'row', backgroundColor: 'rgba(235,240,250,0.85)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,216,235,0.7)', overflow: 'hidden' },
   btn: { paddingHorizontal: 12, paddingVertical: 6 },
   active: { backgroundColor: C.navy },
   divider: { width: 1, backgroundColor: C.border },
@@ -296,15 +346,15 @@ const sr = StyleSheet.create({
   icon: { fontSize: 18, width: 28, textAlign: 'center' },
   label: { fontSize: 15, fontWeight: '600', color: C.text, ...FF },
   value: { fontSize: 11, color: C.text3, marginTop: 1 },
-  chevron: { fontSize: 20, color: C.text3 },
+  chevron: { fontSize: 20, color: C.text3, fontWeight: '200' },
 });
 
 const m = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: '#0E1E3D99', justifyContent: 'flex-end' },
-  card: { backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 10, borderTopWidth: 3, borderColor: C.gold },
+  overlay: { flex: 1, backgroundColor: 'rgba(14,30,61,0.5)', justifyContent: 'flex-end' },
+  card: { backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 10, borderTopWidth: 2, borderColor: C.gold },
   title: { fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 4, ...FF },
   label: { fontSize: 12, color: C.text2, fontWeight: '600', marginBottom: 4, ...FF },
-  input: { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 13, color: C.text, fontSize: 14, marginBottom: 8 },
+  input: { backgroundColor: C.bg, borderWidth: 1, borderColor: 'rgba(200,216,235,0.7)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, color: C.text, fontSize: 14, marginBottom: 8 },
   row: { flexDirection: 'row', gap: 12, marginTop: 4 },
   cancelBtn: { flex: 1, backgroundColor: C.bg, borderRadius: 50, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: C.border },
   cancelText: { color: C.text2, fontSize: 15, fontWeight: '700', ...FF },
@@ -316,13 +366,13 @@ const m = StyleSheet.create({
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 6 },
+  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 110, gap: 8 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 8 },
-  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
+  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
   avatarText: { fontSize: 22, fontWeight: '800', ...FF },
-  eyebrow: { fontSize: 10, color: C.blue, fontWeight: '700', letterSpacing: 2, ...FF },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: C.text, ...FF },
-  stageCard: { borderRadius: 18, padding: 18, borderWidth: 1, gap: 10 },
+  eyebrow: { fontSize: 11, color: C.blue, fontWeight: '600', letterSpacing: 3, opacity: 0.7, ...FF },
+  pageTitle: { fontSize: 26, fontWeight: '200', color: C.text, letterSpacing: -0.5, ...FF },
+  stageCard: { borderRadius: 24, padding: 18, borderWidth: 1, gap: 10 },
   stageBubbleRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   stickerBox: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   stageBubble: { borderRadius: 50, paddingHorizontal: 20, paddingVertical: 9 },
@@ -330,10 +380,18 @@ const s = StyleSheet.create({
   stageDesc: { fontSize: 13, lineHeight: 19, fontWeight: '500' },
   stageLocked: { fontSize: 11, color: C.text3 },
   settingsBlock: {
-    backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, overflow: 'hidden',
-    ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10 }, android: { elevation: 2 } }),
+    backgroundColor: C.card, borderRadius: 22, borderWidth: 1, borderColor: C.border, overflow: 'hidden',
+    ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 16 }, android: { elevation: 2 } }),
   },
-  divider: { height: 1, backgroundColor: C.border, marginHorizontal: 18 },
+  divider: { height: 1, backgroundColor: 'rgba(200,216,235,0.7)', marginHorizontal: 18 },
   footer: { alignItems: 'center', paddingVertical: 8 },
   footerText: { fontSize: 12, color: C.text3, letterSpacing: 0.5, ...FF },
+  anonRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 18 },
+  anonIcon: { fontSize: 18, width: 28, textAlign: 'center' },
+  anonLabel: { fontSize: 15, fontWeight: '600', color: C.text, ...FF },
+  anonDesc: { fontSize: 11, color: C.text3, marginTop: 1 },
+  anonToggle: { width: 48, height: 28, borderRadius: 14, backgroundColor: C.border, justifyContent: 'center', paddingHorizontal: 3 },
+  anonToggleOn: { backgroundColor: C.green },
+  anonDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
+  anonDotOn: { alignSelf: 'flex-end' },
 });

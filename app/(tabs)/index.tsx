@@ -1,31 +1,62 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, TouchableOpacity,
   TextInput, Modal, StyleSheet, Platform,
+  ActivityIndicator, Animated, LayoutAnimation, UIManager,
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+import Constants from 'expo-constants';
 import { useLocale } from '@/context/AppContext';
 
 const FONT = Platform.OS === 'ios' ? 'Avenir Next' : undefined;
 const FF = FONT ? { fontFamily: FONT } : {};
 
+/* ── API base (same pattern as chat.tsx) ── */
+const runtime = Constants as unknown as {
+  expoConfig?: { hostUri?: string };
+  expoGoConfig?: { debuggerHost?: string };
+  manifest?: { debuggerHost?: string };
+  manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
+};
+const hostUri =
+  runtime.expoGoConfig?.debuggerHost ??
+  runtime.manifest?.debuggerHost ??
+  runtime.expoConfig?.hostUri ??
+  runtime.manifest2?.extra?.expoClient?.hostUri;
+const host = hostUri?.split(':')[0];
+const fallbackApiBase = Platform.select({
+  ios: 'http://127.0.0.1:8000',
+  android: 'http://10.0.2.2:8000',
+  default: 'http://localhost:8000',
+});
+const API_BASE = host ? `http://${host}:8000` : fallbackApiBase;
+
+/* ── Vibrant palette ── */
 const C = {
-  bg:      '#F0F5FC',
-  card:    '#FFFFFF',
-  border:  '#D6E8F5',
-  navy:    '#1B3B6F',
-  blue:    '#3B73B9',
-  gold:    '#C4991A',
-  text:    '#0E1E3D',
-  text2:   '#4B6080',
-  text3:   '#8FA7C0',
-  green:   '#1A7A56',
-  red:     '#D44242',
-  tintN:   '#EBF0FA',
-  tintG:   '#FDF7E6',
-  tintB:   '#EBF4FF',
-  tintGr:  '#E8F5EF',
+  bg:        '#EEF3FB',
+  card:      'rgba(255,255,255,0.95)',
+  cardSolid: '#FFFFFF',
+  glass:     'rgba(255,255,255,0.85)',
+  border:    'rgba(190,210,235,0.6)',
+  navy:      '#162F5A',
+  blue:      '#2B6CB0',
+  gold:      '#E8A817',
+  text:      '#0A1628',
+  text2:     '#3D5575',
+  text3:     '#7A95B4',
+  green:     '#0E9A5E',
+  red:       '#E04040',
+  tintN:     'rgba(230,238,252,0.9)',
+  tintG:     'rgba(255,248,225,0.9)',
+  tintB:     'rgba(228,240,255,0.9)',
+  tintGr:    'rgba(220,248,235,0.9)',
+  hero:      'rgba(22,47,90,0.05)',
 };
 
+/* ── Translations ── */
 const T = {
   en: {
     eyebrow: 'DINERO CLARO',
@@ -50,6 +81,13 @@ const T = {
     creditLimit: 'Credit limit',
     cancel: 'Cancel',
     add: 'Add',
+    trendingLabel: 'TRENDING FOR LONG-TERM',
+    trendingSub: 'Popular picks among long-term investors',
+    insightTitle: "Lana's Insights",
+    insightLoading: 'Generating insights...',
+    dailyTipLabel: 'DAILY TIP',
+    streakLabel: 'day streak',
+    streakMsg: 'You\'re building great habits!',
   },
   es: {
     eyebrow: 'DINERO CLARO',
@@ -74,12 +112,77 @@ const T = {
     creditLimit: 'Límite de crédito',
     cancel: 'Cancelar',
     add: 'Agregar',
+    trendingLabel: 'TENDENCIAS A LARGO PLAZO',
+    trendingSub: 'Opciones populares entre inversionistas a largo plazo',
+    insightTitle: 'Consejos de Lana',
+    insightLoading: 'Generando consejos...',
+    dailyTipLabel: 'TIP DEL DÍA',
+    streakLabel: 'días seguidos',
+    streakMsg: '¡Estás creando grandes hábitos!',
   },
 };
 
 type Card = { name: string; balance: number; limit: number };
 const DEFAULT_CARDS: Card[] = [{ name: 'Discover Secured', balance: 110, limit: 500 }];
 
+const DAILY_TIPS = {
+  en: [
+    { emoji: '💳', tip: 'Paying your credit card before the statement date lowers your reported utilization — boosting your score.' },
+    { emoji: '🏦', tip: 'You can open a bank account with an ITIN — no Social Security Number needed at many credit unions.' },
+    { emoji: '💸', tip: 'Wise and Remitly often charge 50-70% less than Western Union for sending money to Latin America.' },
+    { emoji: '📊', tip: '$50/month invested in VOO for 30 years at 10% average return grows to over $100,000.' },
+    { emoji: '🛡️', tip: 'Your bank deposits are protected by FDIC up to $250,000 — regardless of immigration status.' },
+    { emoji: '🚨', tip: 'A "notario" in the U.S. is NOT a lawyer. Never pay a notario for legal or immigration advice.' },
+    { emoji: '👨‍👩‍👧', tip: 'Talk to your kids about money early. A clear savings jar makes watching money grow fun and real.' },
+    { emoji: '📄', tip: 'You can get your credit report for free once a year at AnnualCreditReport.com — no credit card needed.' },
+    { emoji: '🏠', tip: 'FHA loans let you buy a home with just 3.5% down. Ask Lana about first-time buyer programs.' },
+    { emoji: '⚖️', tip: 'Debt collectors cannot threaten you with deportation. That\'s illegal under the FDCPA.' },
+  ],
+  es: [
+    { emoji: '💳', tip: 'Pagar tu tarjeta antes de la fecha de corte reduce tu utilización reportada — mejorando tu puntaje.' },
+    { emoji: '🏦', tip: 'Puedes abrir una cuenta bancaria con ITIN — no necesitas número de seguro social en muchas cooperativas.' },
+    { emoji: '💸', tip: 'Wise y Remitly suelen cobrar 50-70% menos que Western Union para enviar dinero a Latinoamérica.' },
+    { emoji: '📊', tip: '$50/mes invertidos en VOO por 30 años con 10% de retorno promedio crecen a más de $100,000.' },
+    { emoji: '🛡️', tip: 'Tus depósitos bancarios están protegidos por FDIC hasta $250,000 — sin importar tu estatus migratorio.' },
+    { emoji: '🚨', tip: 'Un "notario" en EE.UU. NO es abogado. Nunca pagues a un notario por consejos legales o de inmigración.' },
+    { emoji: '👨‍👩‍👧', tip: 'Habla con tus hijos sobre el dinero desde temprano. Un frasco transparente hace que ahorrar sea divertido.' },
+    { emoji: '📄', tip: 'Puedes obtener tu reporte de crédito gratis una vez al año en AnnualCreditReport.com — sin tarjeta.' },
+    { emoji: '🏠', tip: 'Los préstamos FHA te permiten comprar casa con solo 3.5% de enganche. Pregúntale a Lana.' },
+    { emoji: '⚖️', tip: 'Los cobradores de deudas NO pueden amenazarte con deportación. Eso es ilegal bajo la ley FDCPA.' },
+  ],
+};
+
+const TRENDING = {
+  en: [
+    { ticker: 'VOO', name: 'Vanguard S&P 500 ETF', change: '+24.5%', flag: '🇺🇸', desc: 'Top 500 U.S. companies in one fund.', howTo: 'Open a brokerage account (Fidelity, Schwab, or Robinhood), search "VOO", and buy shares. Start with as little as $1 using fractional shares. Set up automatic monthly investments.' },
+    { ticker: 'QQQ', name: 'Invesco Nasdaq 100', change: '+31.2%', flag: '💻', desc: 'Tech-heavy growth: Apple, Microsoft, Nvidia & more.', howTo: 'Available on any brokerage app. Search "QQQ" and buy. Great for long-term growth. Consider dollar-cost averaging — invest the same amount every month regardless of price.' },
+    { ticker: 'SCHD', name: 'Schwab Dividend Equity', change: '+12.8%', flag: '💰', desc: 'Steady dividends + price growth.', howTo: 'Buy through Schwab or any major broker. SCHD pays quarterly dividends you can reinvest automatically (DRIP). Ideal for building passive income over time.' },
+  ],
+  es: [
+    { ticker: 'VOO', name: 'Vanguard S&P 500 ETF', change: '+24.5%', flag: '🇺🇸', desc: 'Las 500 principales empresas de EE.UU. en un fondo.', howTo: 'Abre una cuenta en un broker (Fidelity, Schwab o Robinhood), busca "VOO" y compra acciones. Puedes empezar desde $1 con acciones fraccionadas. Configura inversiones mensuales automáticas.' },
+    { ticker: 'QQQ', name: 'Invesco Nasdaq 100', change: '+31.2%', flag: '💻', desc: 'Crecimiento tecnológico: Apple, Microsoft, Nvidia y más.', howTo: 'Disponible en cualquier app de inversión. Busca "QQQ" y compra. Ideal para crecimiento a largo plazo. Considera invertir la misma cantidad cada mes sin importar el precio.' },
+    { ticker: 'SCHD', name: 'Schwab Dividend Equity', change: '+12.8%', flag: '💰', desc: 'Dividendos estables + crecimiento.', howTo: 'Compra a través de Schwab o cualquier broker. SCHD paga dividendos trimestrales que puedes reinvertir automáticamente (DRIP). Ideal para generar ingresos pasivos con el tiempo.' },
+  ],
+};
+
+/* ── Animated wrapper ── */
+function FadeSlide({ index, scrollY, children }: { index: number; scrollY: Animated.Value; children: React.ReactNode }) {
+  const offset = 100 + index * 120;
+  const opacity = scrollY.interpolate({ inputRange: [offset - 300, offset - 200], outputRange: [0.6, 1], extrapolate: 'clamp' });
+  const translateY = scrollY.interpolate({ inputRange: [offset - 300, offset - 200], outputRange: [12, 0], extrapolate: 'clamp' });
+  return <Animated.View style={{ opacity, transform: [{ translateY }] }}>{children}</Animated.View>;
+}
+
+/* ── Glass label ── */
+function GlassLabel({ text }: { text: string }) {
+  return (
+    <View style={s.glassLabel}>
+      <Text style={s.glassLabelText}>{text}</Text>
+    </View>
+  );
+}
+
+/* ── Language toggle ── */
 function LangToggle() {
   const { locale, setLocale } = useLocale();
   return (
@@ -99,9 +202,14 @@ function Divider() {
   return <View style={{ height: 1, backgroundColor: C.border, marginVertical: 2 }} />;
 }
 
+/* ══════════════════════════════════════════════════════ */
+/*  MAIN SCREEN                                          */
+/* ══════════════════════════════════════════════════════ */
 export default function FinancesScreen() {
-  const { locale, financialProfile, setFinancialProfile } = useLocale();
+  const { locale, lifeStage, userProfile, financialProfile, setFinancialProfile } = useLocale();
   const t = T[locale];
+
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const [income, setIncome] = useState(() => parseFloat(financialProfile.income) || 2400);
   const [checking, setChecking] = useState(() => parseFloat(financialProfile.checking) || 1240);
@@ -114,9 +222,52 @@ export default function FinancesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [newCard, setNewCard] = useState({ name: '', balance: '', limit: '' });
 
+  const [insight, setInsight] = useState<string | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightOpen, setInsightOpen] = useState(false);
+
+  function toggleInsight() {
+    LayoutAnimation.configureNext(LayoutAnimation.create(250, 'easeInEaseOut', 'opacity'));
+    setInsightOpen(prev => !prev);
+  }
+
+  const dayIndex = Math.floor(Date.now() / 86400000) % DAILY_TIPS.en.length;
+  const streak = Math.floor(Date.now() / 86400000) % 30 + 1; // simulated streak
+
   const scoreGoal = 720;
   const scoreMin = 300;
   const scorePct = ((creditScore - scoreMin) / (scoreGoal - scoreMin)) * 100;
+
+  /* ── Fetch Claude insights ── */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setInsightLoading(true);
+      setInsight(null);
+      const prompt = locale === 'es'
+        ? `Eres Lana, asesora financiera de DineroClaro. Da 3-4 puntos breves de consejos financieros personalizados en español basados en estos datos: Nombre: ${userProfile.name || 'Usuario'}, Edad: ${userProfile.age || 'N/A'}, Etapa: ${lifeStage}, Puntaje de crédito: ${creditScore}, Ingreso: $${income}, Cuenta: $${checking}, Tarjetas: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}. Responde SOLO con los puntos, sin saludo ni cierre.`
+        : `You are Lana, DineroClaro's financial advisor. Give 3-4 brief personalized financial advice bullet points in English based on this data: Name: ${userProfile.name || 'User'}, Age: ${userProfile.age || 'N/A'}, Stage: ${lifeStage}, Credit score: ${creditScore}, Income: $${income}, Checking: $${checking}, Cards: ${cards.map(c => `${c.name} ($${c.balance}/$${c.limit})`).join(', ')}. Respond ONLY with the bullet points, no greeting or sign-off.`;
+      try {
+        const res = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: prompt }),
+        });
+        const data = await res.json();
+        if (!cancelled) setInsight(data.reply ?? data.response ?? JSON.stringify(data));
+      } catch {
+        if (!cancelled) setInsight(locale === 'es' ? 'No se pudo conectar al servidor.' : 'Could not connect to the server.');
+      } finally {
+        if (!cancelled) setInsightLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [locale]);
+
+  /* ── Parallax header interpolations ── */
+  const headerScale = scrollY.interpolate({ inputRange: [-80, 0], outputRange: [1.05, 1], extrapolate: 'clamp' });
+  const headerOpacity = scrollY.interpolate({ inputRange: [0, 300], outputRange: [1, 0.85], extrapolate: 'clamp' });
+  const heroTranslate = scrollY.interpolate({ inputRange: [0, 200], outputRange: [0, -20], extrapolate: 'clamp' });
 
   function syncFinancials(updatedCards?: Card[]) {
     const c = updatedCards ?? cards;
@@ -138,87 +289,185 @@ export default function FinancesScreen() {
     syncFinancials(updated);
   }
 
+  let ci = 0;
+
   return (
     <View style={s.root}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
+        scrollEventThrottle={16}
+      >
 
-        {/* Header */}
-        <View style={s.header}>
-          <View>
-            <Text style={s.eyebrow}>{t.eyebrow}</Text>
-            <Text style={s.pageTitle}>{t.title}</Text>
+        {/* ── Hero header ── */}
+        <Animated.View style={[s.heroWrap, { opacity: headerOpacity, transform: [{ scale: headerScale }, { translateY: heroTranslate }] }]}>
+          <View style={s.heroBubble1} />
+          <View style={s.heroBubble2} />
+          <View style={s.heroBubble3} />
+          <View style={s.header}>
+            <View>
+              <Text style={s.eyebrow}>{t.eyebrow}</Text>
+              <Text style={s.pageTitle}>{t.title}</Text>
+            </View>
+            <LangToggle />
           </View>
-          <LangToggle />
-        </View>
+        </Animated.View>
 
-        {/* Credit Score */}
-        <View style={[s.card, s.cardGold]}>
-          <View style={s.cardRow}>
-            <Text style={s.cardLabel}>{t.creditScore}</Text>
-            <Text style={s.badge}>⭐ Fair</Text>
-          </View>
-          <Text style={s.scoreValue}>{creditScore}</Text>
-          <View style={s.trackWrap}>
-            <View style={[s.trackFill, { width: `${Math.min(scorePct, 100)}%` }]} />
-          </View>
-          <View style={s.scoreRow}>
-            <Text style={s.scoreEdge}>{scoreMin}</Text>
-            <Text style={s.scoreGoal}>{t.goal}: {scoreGoal}</Text>
-          </View>
-        </View>
-
-        {/* Income + Checking */}
-        <View style={s.grid2}>
-          <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.incomePrompt, String(income)); if (v) setIncome(parseFloat(v) || income); }} activeOpacity={0.75}>
-            <Text style={s.cardLabel}>{t.income}</Text>
-            <Text style={s.cardEmoji}>💵</Text>
-            <Text style={s.bigNum}>${income.toLocaleString()}</Text>
-            <Text style={s.tapHint}>{t.tapEdit}</Text>
+        {/* ── Lana's Insights (collapsible) ── */}
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <TouchableOpacity style={s.insightCard} onPress={toggleInsight} activeOpacity={0.85}>
+            <View style={s.insightHeader}>
+              <View style={s.insightAvatar}>
+                <Text style={s.insightAvatarText}>L</Text>
+              </View>
+              <Text style={s.insightTitle}>{t.insightTitle}</Text>
+              <View style={{ flex: 1 }} />
+              {insightLoading ? (
+                <ActivityIndicator size="small" color={C.gold} />
+              ) : (
+                <Text style={s.insightChevron}>{insightOpen ? '▲' : '▼'}</Text>
+              )}
+            </View>
+            {insightOpen && !insightLoading && (
+              <Text style={s.insightBody}>{insight}</Text>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.checkingPrompt, String(checking)); if (v) setChecking(parseFloat(v) || checking); }} activeOpacity={0.75}>
-            <Text style={s.cardLabel}>{t.checking}</Text>
-            <Text style={s.cardEmoji}>🏦</Text>
-            <Text style={s.bigNum}>${checking.toLocaleString()}</Text>
-            <Text style={s.tapHint}>{t.tapEdit}</Text>
-          </TouchableOpacity>
-        </View>
+        </FadeSlide>
 
-        {/* Credit Cards */}
-        <Text style={s.sectionLabel}>{t.creditCard}</Text>
+        {/* ── Daily Tip + Streak ── */}
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <View style={s.dailyRow}>
+            <View style={s.dailyTipCard}>
+              <Text style={s.dailyLabel}>{t.dailyTipLabel}</Text>
+              <Text style={s.dailyEmoji}>{DAILY_TIPS[locale][dayIndex].emoji}</Text>
+              <Text style={s.dailyText}>{DAILY_TIPS[locale][dayIndex].tip}</Text>
+            </View>
+            <View style={s.streakCard}>
+              <Text style={s.streakNum}>{streak}</Text>
+              <Text style={s.streakUnit}>{t.streakLabel}</Text>
+              <Text style={s.streakFire}>🔥</Text>
+            </View>
+          </View>
+        </FadeSlide>
+
+        {/* ── Credit Score ── */}
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <GlassLabel text={t.creditScore} />
+          <View style={[s.card, s.cardGold]}>
+            <View style={s.cardRow}>
+              <Text style={s.cardLabel}>{t.creditScore}</Text>
+              <Text style={s.badge}>{'\u2B50'} Fair</Text>
+            </View>
+            <Text style={s.scoreValue}>{creditScore}</Text>
+            <View style={s.trackWrap}>
+              <View style={[s.trackFill, { width: `${Math.min(scorePct, 100)}%` }]} />
+            </View>
+            <View style={s.scoreRow}>
+              <Text style={s.scoreEdge}>{scoreMin}</Text>
+              <Text style={s.scoreGoal}>{t.goal}: {scoreGoal}</Text>
+            </View>
+          </View>
+        </FadeSlide>
+
+        {/* ── Income + Checking ── */}
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <View style={s.grid2}>
+            <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.incomePrompt, String(income)); if (v) setIncome(parseFloat(v) || income); }} activeOpacity={0.75}>
+              <Text style={s.cardLabel}>{t.income}</Text>
+              <Text style={s.cardEmoji}>{'\uD83D\uDCB5'}</Text>
+              <Text style={s.bigNum}>${income.toLocaleString()}</Text>
+              <Text style={s.tapHint}>{t.tapEdit}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.card, s.flex1]} onPress={() => { const v = prompt(t.checkingPrompt, String(checking)); if (v) setChecking(parseFloat(v) || checking); }} activeOpacity={0.75}>
+              <Text style={s.cardLabel}>{t.checking}</Text>
+              <Text style={s.cardEmoji}>{'\uD83C\uDFE6'}</Text>
+              <Text style={s.bigNum}>${checking.toLocaleString()}</Text>
+              <Text style={s.tapHint}>{t.tapEdit}</Text>
+            </TouchableOpacity>
+          </View>
+        </FadeSlide>
+
+        {/* ── Credit Cards ── */}
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <GlassLabel text={t.creditCard} />
+        </FadeSlide>
+
         {cards.map((card, i) => {
           const util = card.limit > 0 ? (card.balance / card.limit) * 100 : 0;
           const good = util < 30;
           return (
-            <View key={i} style={[s.card, { borderLeftWidth: 3, borderLeftColor: good ? C.green : C.red }]}>
-              <View style={s.cardRow}>
-                <Text style={s.cardName}>💳  {card.name}</Text>
-                <View style={[s.pill, { backgroundColor: good ? C.tintGr : '#FDE8E8' }]}>
-                  <Text style={[s.pillText, { color: good ? C.green : C.red }]}>{Math.round(util)}% {t.used}</Text>
+            <FadeSlide key={i} index={ci++} scrollY={scrollY}>
+              <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: good ? C.green : C.red }]}>
+                <View style={s.cardRow}>
+                  <Text style={s.cardName}>{'\uD83D\uDCB3'}  {card.name}</Text>
+                  <View style={[s.pill, { backgroundColor: good ? C.tintGr : 'rgba(253,232,232,0.7)' }]}>
+                    <Text style={[s.pillText, { color: good ? C.green : C.red }]}>{Math.round(util)}% {t.used}</Text>
+                  </View>
                 </View>
+                <View style={s.trackWrap}>
+                  <View style={[s.trackFill, { width: `${Math.min(util, 100)}%`, backgroundColor: good ? C.green : C.red }]} />
+                </View>
+                <Text style={s.cardBalance}>${card.balance} {t.balance}</Text>
               </View>
-              <View style={s.trackWrap}>
-                <View style={[s.trackFill, { width: `${Math.min(util, 100)}%`, backgroundColor: good ? C.green : C.red }]} />
-              </View>
-              <Text style={s.cardBalance}>${card.balance} {t.balance}</Text>
-            </View>
+            </FadeSlide>
           );
         })}
 
-        <TouchableOpacity style={s.addCard} onPress={() => setModalVisible(true)} activeOpacity={0.7}>
-          <Text style={s.addCardText}>{t.addCard}</Text>
-        </TouchableOpacity>
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <TouchableOpacity style={s.addCard} onPress={() => setModalVisible(true)} activeOpacity={0.7}>
+            <Text style={s.addCardText}>{t.addCard}</Text>
+          </TouchableOpacity>
+        </FadeSlide>
 
-        {/* Tip */}
-        <View style={s.tip}>
-          <Text style={s.tipIcon}>💡</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={s.tipTitle}>{t.tipTitle}</Text>
-            <Text style={s.tipBody}>{t.tipBody}</Text>
+        {/* ── Trending Stocks ── */}
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <GlassLabel text={t.trendingLabel} />
+          <Text style={s.trendingSub}>{t.trendingSub}</Text>
+        </FadeSlide>
+        {TRENDING[locale].map((stock, i) => (
+          <FadeSlide key={stock.ticker} index={ci++} scrollY={scrollY}>
+            <View style={s.stockCard}>
+              <View style={s.stockRow}>
+                <View style={s.stockLeft}>
+                  <Text style={s.stockFlag}>{stock.flag}</Text>
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={s.stockTicker}>{stock.ticker}</Text>
+                      <View style={s.stockChangePill}>
+                        <Text style={s.stockChangeText}>{stock.change} 1Y</Text>
+                      </View>
+                    </View>
+                    <Text style={s.stockName}>{stock.name}</Text>
+                  </View>
+                </View>
+              </View>
+              <Text style={s.stockDesc}>{stock.desc}</Text>
+              <View style={s.stockHowTo}>
+                <Text style={s.stockHowToLabel}>{locale === 'en' ? '📖 How to invest' : '📖 Cómo invertir'}</Text>
+                <Text style={s.stockHowToText}>{stock.howTo}</Text>
+              </View>
+            </View>
+          </FadeSlide>
+        ))}
+
+        {/* ── Tip ── */}
+        <FadeSlide index={ci++} scrollY={scrollY}>
+          <View style={s.tip}>
+            <Text style={s.tipIcon}>{'\uD83D\uDCA1'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.tipTitle}>{t.tipTitle}</Text>
+              <Text style={s.tipBody}>{t.tipBody}</Text>
+            </View>
           </View>
-        </View>
+        </FadeSlide>
 
-      </ScrollView>
+      </Animated.ScrollView>
 
+      {/* ── Modal ── */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={s.overlay}>
           <View style={s.modalCard}>
@@ -242,6 +491,7 @@ export default function FinancesScreen() {
   );
 }
 
+/* ── Language toggle styles ── */
 const lt = StyleSheet.create({
   wrap: { flexDirection: 'row', backgroundColor: C.tintN, borderRadius: 20, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
   btn: { paddingHorizontal: 12, paddingVertical: 6 },
@@ -251,23 +501,96 @@ const lt = StyleSheet.create({
   activeText: { color: '#fff' },
 });
 
+/* ── Main styles ── */
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 40, paddingBottom: 104, gap: 14 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 4 },
-  eyebrow: { fontSize: 10, color: C.blue, fontWeight: '700', letterSpacing: 2, ...FF },
-  pageTitle: { fontSize: 28, fontWeight: '800', color: C.text, marginTop: 2, ...FF },
-  sectionLabel: { fontSize: 12, color: C.text2, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 4, ...FF },
-  card: {
-    backgroundColor: C.card, borderRadius: 18, padding: 18, gap: 8,
-    borderWidth: 1, borderColor: C.border,
-    ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10 }, android: { elevation: 2 } }),
+
+  /* Hero */
+  heroWrap: {
+    backgroundColor: C.hero,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 4,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  cardGold: { borderTopWidth: 3, borderTopColor: C.gold },
+  heroBubble1: {
+    position: 'absolute', top: -30, right: -30,
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(59,115,185,0.07)',
+  },
+  heroBubble2: {
+    position: 'absolute', bottom: -20, left: 20,
+    width: 70, height: 70, borderRadius: 35,
+    backgroundColor: 'rgba(196,153,26,0.06)',
+  },
+  heroBubble3: {
+    position: 'absolute', top: 10, left: -15,
+    width: 50, height: 50, borderRadius: 25,
+    backgroundColor: 'rgba(26,122,86,0.05)',
+  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  eyebrow: { fontSize: 11, color: C.blue, fontWeight: '600', letterSpacing: 3, opacity: 0.7, ...FF },
+  pageTitle: { fontSize: 34, fontWeight: '200', color: C.text, marginTop: 2, letterSpacing: -0.5, ...FF },
+
+  /* Glass label */
+  glassLabel: {
+    backgroundColor: 'rgba(27,59,111,0.06)',
+    borderRadius: 50,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  glassLabelText: {
+    fontSize: 11, color: C.text2, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', ...FF,
+  },
+
+  /* Insight card */
+  insightCard: {
+    backgroundColor: C.card,
+    borderRadius: 22,
+    padding: 18,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderLeftWidth: 4,
+    borderLeftColor: C.gold,
+    ...Platform.select({
+      ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16 },
+      android: { elevation: 3 },
+    }),
+  },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  insightAvatar: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: C.glass,
+    borderWidth: 2, borderColor: C.gold,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  insightAvatarText: { fontSize: 16, fontWeight: '700', color: C.gold, ...FF },
+  insightTitle: { fontSize: 16, fontWeight: '700', color: C.text, ...FF },
+  insightLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  insightLoadingText: { fontSize: 13, color: C.text3, ...FF },
+  insightChevron: { fontSize: 12, color: C.text3 },
+  insightBody: { fontSize: 14, color: C.text2, lineHeight: 21, ...FF },
+
+  /* Cards */
+  card: {
+    backgroundColor: C.card, borderRadius: 22, padding: 18, gap: 8,
+    borderWidth: 1, borderColor: C.border,
+    ...Platform.select({
+      ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16 },
+      android: { elevation: 2 },
+    }),
+  },
+  cardGold: { borderTopWidth: 3, borderTopColor: C.gold, borderRadius: 24 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardLabel: { fontSize: 11, color: C.text3, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: '700', ...FF },
   badge: { fontSize: 11, color: C.gold, fontWeight: '700', backgroundColor: C.tintG, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, ...FF },
-  scoreValue: { fontSize: 48, fontWeight: '800', color: C.gold, letterSpacing: -1, ...FF },
+  scoreValue: { fontSize: 56, fontWeight: '200', color: C.gold, letterSpacing: -1, ...FF },
   trackWrap: { width: '100%', height: 6, backgroundColor: C.tintN, borderRadius: 4, overflow: 'hidden' },
   trackFill: { height: '100%', backgroundColor: C.gold, borderRadius: 4 },
   scoreRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -282,16 +605,75 @@ const s = StyleSheet.create({
   cardBalance: { fontSize: 12, color: C.text2 },
   pill: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   pillText: { fontSize: 11, fontWeight: '700', ...FF },
-  addCard: { borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', borderRadius: 16, padding: 16, alignItems: 'center' },
+  addCard: {
+    borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', borderRadius: 22,
+    padding: 16, alignItems: 'center', backgroundColor: C.glass,
+  },
   addCardText: { color: C.blue, fontSize: 14, fontWeight: '600', ...FF },
-  tip: { backgroundColor: C.tintB, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+
+  /* Trending stocks */
+  trendingSub: { fontSize: 13, color: C.text3, marginBottom: 4, marginTop: -2, ...FF },
+  stockCard: {
+    backgroundColor: C.card, borderRadius: 22, padding: 18, gap: 10,
+    borderWidth: 1, borderColor: C.border,
+    ...Platform.select({
+      ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16 },
+      android: { elevation: 2 },
+    }),
+  },
+  stockRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  stockLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stockFlag: { fontSize: 26 },
+  stockTicker: { fontSize: 17, fontWeight: '800', color: C.navy, letterSpacing: 0.5, ...FF },
+  stockName: { fontSize: 13, color: C.text2, marginTop: 1, ...FF },
+  stockChangePill: { backgroundColor: C.tintGr, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  stockChangeText: { fontSize: 11, fontWeight: '800', color: C.green, ...FF },
+  stockDesc: { fontSize: 13, color: C.text2, lineHeight: 19, ...FF },
+  stockHowTo: { backgroundColor: C.tintB, borderRadius: 14, padding: 14, gap: 4 },
+  stockHowToLabel: { fontSize: 12, fontWeight: '700', color: C.navy, ...FF },
+  stockHowToText: { fontSize: 13, color: C.text2, lineHeight: 20, ...FF },
+
+  /* Daily tip + streak */
+  dailyRow: { flexDirection: 'row', gap: 12 },
+  dailyTipCard: {
+    flex: 3, backgroundColor: C.card, borderRadius: 22, padding: 16, gap: 8,
+    borderWidth: 1, borderColor: C.border, borderLeftWidth: 3, borderLeftColor: C.blue,
+    ...Platform.select({ ios: { shadowColor: C.navy, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 12 }, android: { elevation: 2 } }),
+  },
+  dailyLabel: { fontSize: 10, fontWeight: '700', color: C.blue, letterSpacing: 1.5, ...FF },
+  dailyEmoji: { fontSize: 24 },
+  dailyText: { fontSize: 13, color: C.text2, lineHeight: 19, ...FF },
+  streakCard: {
+    flex: 1, backgroundColor: C.tintG, borderRadius: 22, padding: 14, gap: 2,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(232,168,23,0.2)',
+    ...Platform.select({ ios: { shadowColor: C.gold, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 10 }, android: { elevation: 2 } }),
+  },
+  streakNum: { fontSize: 32, fontWeight: '800', color: C.gold, ...FF },
+  streakUnit: { fontSize: 10, fontWeight: '600', color: C.gold, textAlign: 'center', ...FF },
+  streakFire: { fontSize: 20, marginTop: 2 },
+
+  /* Tip */
+  tip: {
+    backgroundColor: C.tintB, borderRadius: 22, padding: 18,
+    borderWidth: 1, borderColor: C.border,
+    flexDirection: 'row', gap: 12, alignItems: 'flex-start',
+  },
   tipIcon: { fontSize: 20, marginTop: 1 },
   tipTitle: { fontSize: 14, fontWeight: '700', color: C.navy, ...FF },
   tipBody: { fontSize: 13, color: C.text2, lineHeight: 19, marginTop: 2 },
-  overlay: { flex: 1, backgroundColor: '#0E1E3D99', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 12, borderTopWidth: 3, borderColor: C.gold },
+
+  /* Modal */
+  overlay: { flex: 1, backgroundColor: 'rgba(14,30,61,0.5)', justifyContent: 'flex-end' },
+  modalCard: {
+    backgroundColor: C.cardSolid, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 24, gap: 12, borderTopWidth: 3, borderColor: C.gold,
+  },
   modalTitle: { fontSize: 18, fontWeight: '800', color: C.text, ...FF },
-  input: { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 13, color: C.text, fontSize: 14 },
+  input: {
+    backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 13, color: C.text, fontSize: 14,
+  },
   modalRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
   cancelBtn: { flex: 1, backgroundColor: C.bg, borderRadius: 50, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: C.border },
   cancelText: { color: C.text2, fontSize: 15, fontWeight: '700', ...FF },

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import chat, recommendations, health, financial
+from .routes import chat, recommendations, health, financial, scan
 
 app = FastAPI(title="DineroClaro API", version="0.1.0")
 
@@ -17,6 +17,7 @@ app.include_router(health.router, prefix="/health", tags=["health"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 app.include_router(financial.router, prefix="/financial", tags=["financial"])
+app.include_router(scan.router, prefix="/scan", tags=["scan"])
 
 
 @app.get("/")
